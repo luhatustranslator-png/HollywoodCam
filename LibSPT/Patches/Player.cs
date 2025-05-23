@@ -1,7 +1,5 @@
 ﻿using System.Reflection;
 using EFT;
-using EFT.CameraControl;
-using EFT.UI;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 
@@ -26,7 +24,7 @@ public class PlayerShotReactionsPostFixPatch : ModulePatch
         {
             hitPoint.force *= Plugin.FlinchScale.Value;
         }
-        
+
         foreach (var hitPoint in __instance.HitReaction.effectorHitPoints)
         {
             hitPoint.force *= Plugin.FlinchScale.Value;
@@ -55,7 +53,7 @@ public class PlayerOnLeanPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(Player).GetMethod("method_3");
+        return typeof(Player).GetMethod(nameof(Player.method_3));
     }
 
     [PatchPostfix]
@@ -69,7 +67,7 @@ public class PlayerOnLeanPostfixPatch : ModulePatch
         // Don't shoulder swap in first person ADS mode
         if (firearmController == null || (firearmController.IsAiming && __instance.PointOfView == EPointOfView.FirstPerson))
             return;
-        
+
         if ((__instance.MovementContext.LeftStanceEnabled && dir > 0f) || (!__instance.MovementContext.LeftStanceEnabled && dir < 0f))
             firearmController.ChangeLeftStance();
     }

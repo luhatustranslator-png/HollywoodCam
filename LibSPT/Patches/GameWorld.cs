@@ -21,5 +21,8 @@ public class GameWorldStartedPostfixPatch : ModulePatch
 
         var tpView = __instance.gameObject.AddComponent<ThirdPersonView>();
         tpView.localPlayer = __instance.MainPlayer;
+        
+        // Disables the stupid jitter when rotating on the trunk
+        __instance.MainPlayer.TrunkRotationLimit = 0f;
     }
 }

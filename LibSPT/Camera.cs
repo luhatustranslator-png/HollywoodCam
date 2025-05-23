@@ -111,7 +111,7 @@ public class ThirdPersonView : MonoBehaviour
     public Player localPlayer;
     private bool _aimFlag;
 
-    private int _camStance;
+    private int _camStance = 1;
     private int _fovAdj;
     private int _fovOrig;
     
@@ -192,6 +192,12 @@ public class ThirdPersonView : MonoBehaviour
 
         // The offset vector is passed by value, which means it's safe to modify it here
         desiredCameraOffset.x *= _camStance;
+
+        if (localPlayer.IsSprintEnabled)
+        {
+            desiredCameraOffset.z *= 2f;
+            desiredCameraOffset.y *= 2f;
+        }
 
         if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
         {
