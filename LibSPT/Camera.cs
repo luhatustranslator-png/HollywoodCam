@@ -110,7 +110,8 @@ public class ThirdPersonView : MonoBehaviour
 {
     public Player localPlayer;
     private bool _aimFlag;
-    
+
+    private int _camStance;
     private int _fovAdj;
     private int _fovOrig;
     
@@ -119,14 +120,10 @@ public class ThirdPersonView : MonoBehaviour
     public void Update()
     {
         if (Input.GetKeyDown(Plugin.ThirdPersonToggleKey.Value))
-        {
             Plugin.ThirdPersonEnabled.Value = !Plugin.ThirdPersonEnabled.Value;
-        }
 
         if (Input.GetKeyDown(Plugin.ShoulderCameraToggleKey.Value))
-        {
             Plugin.ShoulderCameraEnabled.Value = !Plugin.ShoulderCameraEnabled.Value;
-        }
         
         var handsController = localPlayer.HandsController as Player.ItemHandsController;
         if (handsController == null || localPlayer.CameraPosition == null)
@@ -153,9 +150,6 @@ public class ThirdPersonView : MonoBehaviour
                     case true when localPlayer.PointOfView == EPointOfView.ThirdPerson:
                         UpdatePoV(EPointOfView.FirstPerson);
                         return;
-                    case false when localPlayer.PointOfView == EPointOfView.FirstPerson:
-                        UpdatePoV(EPointOfView.ThirdPerson);
-                        break;
                 }
 
                 break;
@@ -168,24 +162,48 @@ public class ThirdPersonView : MonoBehaviour
                     false when _aimFlag && Plugin.ShoulderCameraEnabled.Value => false,
                     _ => Plugin.ShoulderCameraEnabled.Value
                 };
-
-                if (localPlayer.PointOfView != EPointOfView.ThirdPerson)
-                {
-                    UpdatePoV(EPointOfView.FirstPerson);   
-                }
-
                 break;
             }
             case AdsModeEnum.None:
                 break;
             default:
-                Plugin.Log.LogError($"Unknown ads mode selected: {adsModeSelected}");
+                Plugin.Log.LogError($"Unknown ADS mode selected: {adsModeSelected}");
                 break;
+        }
+        
+        if (localPlayer.PointOfView != EPointOfView.ThirdPerson)
+        {
+            UpdatePoV(EPointOfView.ThirdPerson);   
         }
 
         _aimFlag = handsController.IsAiming;
 
         var desiredCameraOffset = Plugin.ShoulderCameraEnabled.Value ? Plugin.ShoulderCameraOffset.Value : Plugin.MainCameraOffset.Value;
+
+        if (Input.GetKeyDown(Plugin.ShoulderSwapCameraKey.Value))
+            _camStance *= -1;
+
+        _camStance = localPlayer.MovementContext._tilt switch
+        {
+            < 0 => -1,
+            > 0 => 1,
+            _ => _camStance
+        };
+
+        // The offset vector is passed by value, which means it's safe to modify it here
+        desiredCameraOffset.x *= _camStance;
+
+        if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
+        {
+            var firearmController = localPlayer.HandsController as Player.FirearmController;
+
+            if (firearmController != null)
+            {
+                if ((localPlayer.MovementContext.LeftStanceEnabled && _camStance > 0f)
+                    || (!localPlayer.MovementContext.LeftStanceEnabled && _camStance < 0f))
+                    firearmController.ChangeLeftStance();
+            }            
+        }
         
         localPlayer.CameraPosition.localPosition = Vector3.Lerp(
             localPlayer.CameraPosition.localPosition, desiredCameraOffset, Time.deltaTime * Plugin.CameraSwitchSpeed.Value
@@ -240,6 +258,9 @@ public class ThirdPersonView : MonoBehaviour
         var handsController = localPlayer.HandsController as Player.FirearmController;
 
         if (handsController == null)
+            return;
+        
+        if (!handsController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
             return;
 
         var ray = new Ray(handsController.CurrentFireport.position, handsController.WeaponDirection * 1f);
