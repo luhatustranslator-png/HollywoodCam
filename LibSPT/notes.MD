@@ -12,3 +12,8 @@
     * This determines the desired position.
   * Spherecast 0.25m sphere from the base (first person) camera position to the desired position.
     * Get the closest point on that vector to any collision. If no collision, then we can be at the desired position.
+
+
+# TODO
+ - Look at GClass3407.method_1, this seems to take the current camera position, take the Player.CameraPosition as target, and tries
+   to do collision checks (badly).

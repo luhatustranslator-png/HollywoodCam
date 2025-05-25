@@ -133,7 +133,7 @@ public class Plugin : BaseUnityPlugin
             "The default camera position offset relative to the first person view (in meters).",
             tags: new ConfigurationManagerAttributes { Order = 4 }
         ));
-        CameraShoulderOffset = Config.Bind(headerCamera, "Shoulder Cam Offset", new Vector3(0.5f, 0.15f, -0.5f), new ConfigDescription(
+        CameraShoulderOffset = Config.Bind(headerCamera, "Shoulder Cam Offset", new Vector3(0.5f, 0.05f, -0.5f), new ConfigDescription(
             "The shoulder camera position offset relative to the first person view (in meters).",
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
@@ -225,7 +225,7 @@ public class Plugin : BaseUnityPlugin
             new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        SprintOffsetFactor = Config.Bind(headerSprint, "Sprint Cam Offset Factor", new Vector3(0f, 1.5f, 2.0f), new ConfigDescription(
+        SprintOffsetFactor = Config.Bind(headerSprint, "Sprint Cam Offset Factor", new Vector3(1f, 1.5f, 2.0f), new ConfigDescription(
             "Multiplies the current camera position offsets when sprinting. In practice, it's for moving the camera further back .",
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));

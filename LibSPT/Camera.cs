@@ -1,5 +1,4 @@
-﻿using System;
-using Comfort.Common;
+﻿using Comfort.Common;
 using EFT;
 using EFT.Animations;
 using UnityEngine;
@@ -113,12 +112,17 @@ public class ThirdPersonView : MonoBehaviour
     private bool _thirdPersonEnabled;
     private CameraPositionEnum _cameraPosition;
     private int _cameraStance;
+    private LayerMask _hitMask;
     
     private bool _aimFlag;
     private bool _sprintFlag;
     
     private SharedGameSettingsClass _gameSettings;
     private static readonly CustomAnimStrategy CustomAnimStrategy = new();
+    
+    private float _origLootRaycastDistance = 1f;
+    private float _origDoorRaycastDistance = 0.75f;
+    private float _origPlayerRaycastDistance = 2.5f;
 
     public void Awake()
     {
@@ -126,7 +130,14 @@ public class ThirdPersonView : MonoBehaviour
         _cameraPosition = Plugin.CameraPositionDefault.Value;
         _cameraStance = (int)Plugin.CameraStanceDefault.Value;
 
+        // Remove players from this to avoid colliding with ourselves, duh
+        _hitMask = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider")); 
+
         _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
+
+        _origLootRaycastDistance = EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE;
+        _origDoorRaycastDistance = EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE;
+        _origPlayerRaycastDistance = EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE;
     }
 
     public void Update()
@@ -254,7 +265,7 @@ public class ThirdPersonView : MonoBehaviour
             _ => Plugin.CameraMainOffset.Value
         };
         desiredCameraOffset.x *= _cameraStance;
-
+        
         var cameraSpeed = Plugin.CameraSwitchSpeed.Value;
         
         if (localPlayer.IsSprintEnabled)
@@ -271,13 +282,70 @@ public class ThirdPersonView : MonoBehaviour
         }
 
         _sprintFlag = localPlayer.IsSprintEnabled;
+
+        var collisionDetected = TryHandleCollisions(desiredCameraOffset, out var actualCameraOffset);
         
         localPlayer.CameraPosition.localPosition = Vector3.Lerp(
-            localPlayer.CameraPosition.localPosition, desiredCameraOffset, Time.deltaTime * cameraSpeed
+            localPlayer.CameraPosition.localPosition, actualCameraOffset, Time.deltaTime * cameraSpeed
         );
+        
+        // if (collisionDetected)
+        // {
+        //     localPlayer.CameraPosition.localPosition = actualCameraOffset;
+        // }
+        // else
+        // {
+        //                 
+        // }
     }
 
-    private Vector3 ConfinementInterpolated(Vector3 near, Vector3 far)
+    private bool TryHandleCollisions(Vector3 desiredCameraOffset, out Vector3 actualCameraOffset)
+    {
+        var parentTransform = localPlayer.CameraPosition.parent;
+        // Transform the desired offset to world coordinates
+        var desiredWorldPos = parentTransform.TransformPoint(desiredCameraOffset);
+        // Get the vector between the camera parent and the desired position
+        var offsetVector = desiredWorldPos - parentTransform.position;
+        // Ray cast parameters
+        var ray = new Ray(parentTransform.position, offsetVector.normalized);
+
+        // Try to do a sphere cast first, if that hits nothing, do another raycast as the spherecast might've clipped behind a wall.
+        if (!Physics.SphereCast(ray, 0.25f, out var hitInfo, offsetVector.magnitude, _hitMask))
+        {
+            if (!Physics.Raycast(ray, out hitInfo, offsetVector.magnitude, _hitMask))
+            {
+                // We hit nothing, continue with the desired offset as the actual offset
+                actualCameraOffset = desiredCameraOffset; 
+                return false;
+            }
+        }
+        // Find the closest point to the collision on the line between the parent and the desired position 
+        var adjustedWorldPos = ClosestPointOnLine(parentTransform.position, desiredWorldPos, hitInfo.point);
+        // Translate back to local/relative offset
+        actualCameraOffset = parentTransform.InverseTransformPoint(adjustedWorldPos);
+        return true;
+    }
+    
+    private static Vector3 ClosestPointOnLine(Vector3 origin, Vector3 target, Vector3 point)
+    {
+        var vec1 = point - origin;
+        var vec2 = (target - origin).normalized;
+
+        var d = Vector3.Distance(origin, target);
+        var t = Vector3.Dot(vec2, vec1);
+
+        if (t <= 0) 
+            return origin;
+
+        if (t >= d) 
+            return target;
+ 
+        var vec3 = vec2 * t;
+
+        return origin + vec3;
+    }
+
+    private static Vector3 ConfinementInterpolated(Vector3 near, Vector3 far)
     {
         // TODO: Calculate the confinement score and interpolate between near and far. 
         return far;
@@ -289,6 +357,12 @@ public class ThirdPersonView : MonoBehaviour
 
         if (value == EPointOfView.ThirdPerson)
         {
+            localPlayer.POM.CameraCollider.enabled = false;
+            
+            EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = 100f;
+            EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = 100f;
+            EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = 100f;
+            
             // Re-enable recoil and hit reactions in third person
             if (localPlayer.HitReaction != null)
             {
@@ -300,6 +374,12 @@ public class ThirdPersonView : MonoBehaviour
         }
         else
         {
+            localPlayer.POM.CameraCollider.enabled = true;
+            
+            EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = _origLootRaycastDistance;
+            EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = _origDoorRaycastDistance;
+            EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = _origPlayerRaycastDistance;
+            
             localPlayer.CameraPosition.localPosition = Vector3.zero;
         }
     }
@@ -331,19 +411,19 @@ public class ThirdPersonView : MonoBehaviour
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
 
-        var handsController = localPlayer.HandsController as Player.FirearmController;
+        var firearmController = localPlayer.HandsController as Player.FirearmController;
 
-        if (handsController == null)
+        if (firearmController == null)
             return;
         
-        if (!handsController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
+        if (!firearmController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
             return;
 
-        var ray = new Ray(handsController.CurrentFireport.position, handsController.WeaponDirection * 1f);
-        if (!Physics.Raycast(ray, out var raycastHit, 100000, GClass3449.HitMask))
+        var ray = new Ray(firearmController.CurrentFireport.position, firearmController.WeaponDirection);
+        if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
             return;
 
-        var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(raycastHit.point);
+        var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(hitInfo.point);
 
         if (screenPosition == Vector2.zero)
             return;
