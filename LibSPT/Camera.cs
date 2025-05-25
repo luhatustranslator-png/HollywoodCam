@@ -109,31 +109,39 @@ public class CustomAnimStrategy : GInterface38
 public class ThirdPersonView : MonoBehaviour
 {
     public Player localPlayer;
-    private bool _aimFlag;
 
-    private int _camStance = 1;
-    private int _fovAdj;
-    private int _fovOrig;
+    private bool _thirdPersonEnabled;
+    private CameraPositionEnum _cameraPosition;
+    private int _cameraStance;
     
+    private bool _aimFlag;
+    private bool _sprintFlag;
+    
+    private SharedGameSettingsClass _gameSettings;
     private static readonly CustomAnimStrategy CustomAnimStrategy = new();
+
+    public void Awake()
+    {
+        _thirdPersonEnabled = Plugin.PointOfViewDefault.Value == PointOfViewEnum.ThirdPerson;
+        _cameraPosition = Plugin.CameraPositionDefault.Value;
+        _cameraStance = (int)Plugin.CameraStanceDefault.Value;
+
+        _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
+    }
 
     public void Update()
     {
-        if (Input.GetKeyDown(Plugin.ThirdPersonToggleKey.Value))
-            Plugin.ThirdPersonEnabled.Value = !Plugin.ThirdPersonEnabled.Value;
+        HandleInputs();
 
-        if (Input.GetKeyDown(Plugin.ShoulderCameraToggleKey.Value))
-            Plugin.ShoulderCameraEnabled.Value = !Plugin.ShoulderCameraEnabled.Value;
-        
         var handsController = localPlayer.HandsController as Player.ItemHandsController;
         if (handsController == null || localPlayer.CameraPosition == null)
             return;
         
-        if (!Plugin.ThirdPersonEnabled.Value)
+        if (!_thirdPersonEnabled)
         {
             if (localPlayer.PointOfView != EPointOfView.ThirdPerson) return;
 
-            UpdatePoV(EPointOfView.FirstPerson);
+            UpdatePointOfView(EPointOfView.FirstPerson);
             return;
         }
 
@@ -148,7 +156,7 @@ public class ThirdPersonView : MonoBehaviour
                     case true when localPlayer.PointOfView == EPointOfView.FirstPerson:
                         return;
                     case true when localPlayer.PointOfView == EPointOfView.ThirdPerson:
-                        UpdatePoV(EPointOfView.FirstPerson);
+                        UpdatePointOfView(EPointOfView.FirstPerson);
                         return;
                 }
 
@@ -156,71 +164,124 @@ public class ThirdPersonView : MonoBehaviour
             }
             case AdsModeEnum.Shoulder:
             {
-                Plugin.ShoulderCameraEnabled.Value = handsController.IsAiming switch
+                switch (handsController.IsAiming)
                 {
-                    true when !_aimFlag && !Plugin.ShoulderCameraEnabled.Value => true,
-                    false when _aimFlag && Plugin.ShoulderCameraEnabled.Value => false,
-                    _ => Plugin.ShoulderCameraEnabled.Value
-                };
+                    case true when !_aimFlag:
+                        _cameraPosition = CameraPositionEnum.Shoulder;
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0.025f);
+                        ScopeFoV();
+                        break;
+                    case false when _aimFlag && _cameraPosition == CameraPositionEnum.Shoulder:
+                        _cameraPosition = Plugin.CameraPositionDefault.Value;
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
+                        ResetFoV();
+                        break;
+                }
                 break;
             }
             case AdsModeEnum.None:
+                switch (handsController.IsAiming)
+                {
+                    case true when !_aimFlag:
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0.025f);
+                        ScopeFoV();
+                        break;
+                    case false when _aimFlag:
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
+                        ResetFoV();
+                        break;
+                }
                 break;
             default:
                 Plugin.Log.LogError($"Unknown ADS mode selected: {adsModeSelected}");
                 break;
         }
         
+        _aimFlag = handsController.IsAiming;
+        
+        HandleThirdPerson();
+    }
+
+    private void HandleInputs()
+    {
+        if (Input.GetKeyDown(Plugin.ThirdPersonToggleKey.Value))
+            _thirdPersonEnabled = !_thirdPersonEnabled;
+
+        if (Input.GetKeyDown(Plugin.CameraShoulderKey.Value))
+            _cameraPosition = _cameraPosition != CameraPositionEnum.Shoulder ? CameraPositionEnum.Shoulder : Plugin.CameraPositionDefault.Value;
+        
+        if (Input.GetKeyDown(Plugin.CameraStanceLeftKey.Value))
+            _cameraStance = -1;
+        
+        if (Input.GetKeyDown(Plugin.CameraStanceRightKey.Value))
+            _cameraStance = 1;
+    }
+    
+    private void HandleThirdPerson()
+    {
         if (localPlayer.PointOfView != EPointOfView.ThirdPerson)
         {
-            UpdatePoV(EPointOfView.ThirdPerson);   
+            UpdatePointOfView(EPointOfView.ThirdPerson);   
         }
 
-        _aimFlag = handsController.IsAiming;
-
-        var desiredCameraOffset = Plugin.ShoulderCameraEnabled.Value ? Plugin.ShoulderCameraOffset.Value : Plugin.MainCameraOffset.Value;
-
-        if (Input.GetKeyDown(Plugin.ShoulderSwapCameraKey.Value))
-            _camStance *= -1;
-
-        _camStance = localPlayer.MovementContext._tilt switch
+        if (Plugin.CameraStanceSwapOnLeanEnabled.Value)
         {
-            < 0 => -1,
-            > 0 => 1,
-            _ => _camStance
-        };
-
-        // The offset vector is passed by value, which means it's safe to modify it here
-        desiredCameraOffset.x *= _camStance;
-
-        if (localPlayer.IsSprintEnabled)
-        {
-            desiredCameraOffset.z *= 2f;
-            desiredCameraOffset.y *= 2f;
+            _cameraStance = localPlayer.MovementContext._tilt switch
+            {
+                < 0 => -1,
+                > 0 => 1,
+                _ => _cameraStance
+            };            
         }
-
+        
         if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
         {
             var firearmController = localPlayer.HandsController as Player.FirearmController;
 
             if (firearmController != null)
             {
-                if ((localPlayer.MovementContext.LeftStanceEnabled && _camStance > 0f)
-                    || (!localPlayer.MovementContext.LeftStanceEnabled && _camStance < 0f))
+                if ((localPlayer.MovementContext.LeftStanceEnabled && _cameraStance > 0f)
+                    || (!localPlayer.MovementContext.LeftStanceEnabled && _cameraStance < 0f))
                     firearmController.ChangeLeftStance();
             }            
         }
+
+        // The offset vector is passed by value, which means it's safe to modify it here
+        var desiredCameraOffset = _cameraPosition switch
+        {
+            CameraPositionEnum.Main => ConfinementInterpolated(Plugin.CameraShoulderOffset.Value, Plugin.CameraMainOffset.Value),
+            CameraPositionEnum.Shoulder => Plugin.CameraShoulderOffset.Value,
+            _ => Plugin.CameraMainOffset.Value
+        };
+        desiredCameraOffset.x *= _cameraStance;
+
+        if (localPlayer.IsSprintEnabled)
+        {
+            if (!_sprintFlag)
+                AdjustFoV(15);
+            desiredCameraOffset.x = 0f;
+            desiredCameraOffset.z *= 2f;
+            desiredCameraOffset.y *= 1.5f;
+        }
+        else if (_sprintFlag)
+            ResetFoV();
+        
+        _sprintFlag = localPlayer.IsSprintEnabled;
         
         localPlayer.CameraPosition.localPosition = Vector3.Lerp(
             localPlayer.CameraPosition.localPosition, desiredCameraOffset, Time.deltaTime * Plugin.CameraSwitchSpeed.Value
         );
     }
 
-    private void UpdatePoV(EPointOfView value)
+    private Vector3 ConfinementInterpolated(Vector3 near, Vector3 far)
+    {
+        // TODO: Calculate the confinement score and interpolate between near and far. 
+        return far;
+    }
+
+    private void UpdatePointOfView(EPointOfView value)
     {
         localPlayer.PointOfView = value;
-
-        var gameSettings = Singleton<SharedGameSettingsClass>.Instance.Game.Settings;
 
         if (value == EPointOfView.ThirdPerson)
         {
@@ -232,28 +293,32 @@ public class ThirdPersonView : MonoBehaviour
 
             // Force our own custom weapon animation strategy that enables proper recoil
             localPlayer.ProceduralWeaponAnimation.SetStrategy(CustomAnimStrategy);
-
-            // Adjust the FOV
-            // if (_fovAdj != 0)
-            // {
-            //     // We stash away the fov change and the current fov as the user might fiddle with the values
-            //     _fovOrig = gameSettings.FieldOfView.Value;
-            //     CameraClass.Instance.SetFov(CameraClass.Instance.Fov + _fovAdj, Plugin.ThirdPersonFovSpeed.Value);
-            //     gameSettings.FieldOfView.Value += _fovAdj;
-            // }
         }
         else
         {
             localPlayer.CameraPosition.localPosition = Vector3.zero;
-
-            // Adjust the FOV
-            // if (_fovAdj != 0)
-            // {
-            //     CameraClass.Instance.SetFov(CameraClass.Instance.Fov - _fovAdj, Plugin.ThirdPersonFovSpeed.Value);
-            //     gameSettings.FieldOfView.Value = _fovOrig;
-            //     _fovAdj = 0;
-            // }
         }
+    }
+
+    private void ScopeFoV()
+    {
+        var fov = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic ? 35 : _gameSettings.Game.Settings.FieldOfView.Value - 15;
+        SetFoV(fov);
+    }
+    
+    private void AdjustFoV(int adjustment)
+    {
+        CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value + adjustment, Plugin.FovChangeSpeed.Value);
+    }
+    
+    private static void SetFoV(int fov)
+    {
+        CameraClass.Instance.SetFov(fov, Plugin.FovChangeSpeed.Value);
+    }
+    
+    private void ResetFoV()
+    {
+        CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value, Plugin.FovChangeSpeed.Value);
     }
 
     public void OnGUI()

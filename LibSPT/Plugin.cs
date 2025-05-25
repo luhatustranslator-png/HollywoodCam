@@ -7,17 +7,35 @@ using UnityEngine;
 
 namespace HollywoodCam;
 
-public enum AdsModeEnum
+public enum PointOfViewEnum
 {
     FirstPerson,
+    ThirdPerson
+}
+
+public enum CameraPositionEnum
+{
+    Main,
     Shoulder,
-    None
+}
+
+public enum CameraStanceEnum
+{
+    Left = -1,
+    Right = 1
 }
 
 public enum GunStanceSyncEnum
 {
     Cam,
     Lean,
+    None
+}
+
+public enum AdsModeEnum
+{
+    FirstPerson,
+    Shoulder,
     None
 }
 
@@ -30,27 +48,27 @@ public class Plugin : BaseUnityPlugin
 
     public static ManualLogSource Log;
 
-    public static ConfigEntry<bool> ThirdPersonEnabled;
+    public static ConfigEntry<PointOfViewEnum> PointOfViewDefault;
     public static ConfigEntry<KeyCode> ThirdPersonToggleKey;
 
-    public static ConfigEntry<Vector3> MainCameraOffset;
-    public static ConfigEntry<int> MainCameraFovOffset;
-    public static ConfigEntry<bool> ShoulderCameraEnabled;
-    public static ConfigEntry<KeyCode> ShoulderCameraToggleKey;
-    public static ConfigEntry<Vector3> ShoulderCameraOffset;
-    public static ConfigEntry<int> ShoulderCameraFovOffset;
+    public static ConfigEntry<CameraPositionEnum> CameraPositionDefault;
+    public static ConfigEntry<Vector3> CameraMainOffset;
+    public static ConfigEntry<Vector3> CameraShoulderOffset;
+    public static ConfigEntry<KeyCode> CameraShoulderKey;
     public static ConfigEntry<float> CameraSwitchSpeed;
 
     public static ConfigEntry<AdsModeEnum> AdsModeBasic;
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
-    
+
     public static ConfigEntry<bool> CrosshairEnabled;
     public static ConfigEntry<bool> CrosshairAdsOnlyEnabled;
     public static ConfigEntry<Color> CrosshairColor;
     public static ConfigEntry<float> CrosshairThickness;
 
-    public static ConfigEntry<KeyCode> ShoulderSwapCameraKey;
-    public static ConfigEntry<bool> ShoulderSwapCameraOnLeanEnabled;
+    public static ConfigEntry<CameraStanceEnum> CameraStanceDefault;
+    public static ConfigEntry<KeyCode> CameraStanceLeftKey;
+    public static ConfigEntry<KeyCode> CameraStanceRightKey;
+    public static ConfigEntry<bool> CameraStanceSwapOnLeanEnabled;
     public static ConfigEntry<GunStanceSyncEnum> GunStanceSync;
 
     public static ConfigEntry<float> FovChangeSpeed;
@@ -86,50 +104,39 @@ public class Plugin : BaseUnityPlugin
         const string headerCamera = "2. Camera";
         const string headerAiming = "3. Aiming";
         const string headerCrosshair = "4. Crosshair";
-        const string headerShoulderSwap = "5. Stance";
+        const string headerStance = "5. Stance Control";
         const string headerMisc = "6. Misc Flotsam";
         const string headerDebug = "7. Debug";
 
-        ThirdPersonEnabled = Config.Bind(headerPerspective, "Enable Third Person View", true, new ConfigDescription(
-            "Toggles the third person view camera.",
+        PointOfViewDefault = Config.Bind(headerPerspective, "Default PoV", PointOfViewEnum.ThirdPerson, new ConfigDescription(
+            "The default PoV to use at the start of the raid.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
         ThirdPersonToggleKey = Config.Bind(headerPerspective, "Third Person Toggle Key", KeyCode.None, new ConfigDescription(
             "Set the key that will toggle between first and third person view.",
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-        
-        MainCameraOffset = Config.Bind(headerCamera, "Main Cam Position Offset", new Vector3(0.5f, 0.15f, -1.5f), new ConfigDescription(
-            "The default camera position offset.",
-            tags: new ConfigurationManagerAttributes { Order = 7 }
-        ));
-        MainCameraFovOffset = Config.Bind(headerCamera, "Main Cam FOV Offset", 35, new ConfigDescription(
-            "How much to increase or decrease the FOV when in the main camera mode. This is relative to the base game FOV." +
-            "Ideally, the fov should increase slightly so that you have additional peripheral vision.",
-            new AcceptableValueRange<int>(-50, 50),
-            tags: new ConfigurationManagerAttributes { Order = 6 }
-        ));
-        ShoulderCameraEnabled = Config.Bind(headerCamera, "Enable Shoulder Cam", false, new ConfigDescription(
-            "Switch to the shoulder camera instead of the main camera.",
+
+        CameraPositionDefault = Config.Bind(headerCamera, "Default Camera Position", CameraPositionEnum.Main, new ConfigDescription(
+            "Determines the default camera position at the start of the raid, note that the game will dynamically adjust the actual position" +
+            "based on multiple factors like visibility, ADS, etc.",
             tags: new ConfigurationManagerAttributes { Order = 5 }
         ));
-        ShoulderCameraToggleKey = Config.Bind(headerCamera, "Shoulder Cam Toggle Key", KeyCode.None, new ConfigDescription(
-            "Toggles between the shoulder and main camera.",
+        CameraMainOffset = Config.Bind(headerCamera, "Main Cam Offset", new Vector3(0.5f, 0.15f, -1.5f), new ConfigDescription(
+            "The default camera position offset relative to the first person view (in meters).",
             tags: new ConfigurationManagerAttributes { Order = 4 }
         ));
-        ShoulderCameraOffset = Config.Bind(headerCamera, "Shoulder Cam Position Offset", new Vector3(0.5f, 0.15f, -0.5f), new ConfigDescription(
-            "The shoulder camera position offset.",
+        CameraShoulderOffset = Config.Bind(headerCamera, "Shoulder Cam Offset", new Vector3(0.5f, 0.15f, -0.5f), new ConfigDescription(
+            "The shoulder camera position offset relative to the first person view (in meters).",
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
-        ShoulderCameraFovOffset = Config.Bind(headerCamera, "Shoulder Cam FOV Offset", 0, new ConfigDescription(
-            "How much to increase or decrease the FOV when in the shoulder camera mode. This is relative to the base game FOV." +
-            "If you want the shoulder cam to always provide a bit of zoom, set this to a negative number." +
-            "NB: ADS will separately zoom in, independently of this setting.",
-            new AcceptableValueRange<int>(-50, 50),
+        CameraShoulderKey = Config.Bind(headerCamera, "Shoulder Cam Key", KeyCode.None, new ConfigDescription(
+            "Switches between the shoulder and main camera.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        CameraSwitchSpeed = Config.Bind(headerCamera, "Camera Switch Speed", 5f, new ConfigDescription(
-            "How fast the camera switches between offsets in m/s. Higher values are faster, lower values are smoother.",
+
+        CameraSwitchSpeed = Config.Bind(headerCamera, "Switch Speed", 5f, new ConfigDescription(
+            "How fast the camera switches between positions and stances in m/s. Higher values are faster, lower values are smoother.",
             new AcceptableValueRange<float>(1, 25f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
@@ -158,22 +165,33 @@ public class Plugin : BaseUnityPlugin
             new AcceptableValueRange<float>(1f, 10f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-        
-        ShoulderSwapCameraKey = Config.Bind(headerShoulderSwap, "Shoulder Swap Cam Key", KeyCode.None, new ConfigDescription(
-            "Key to swap the camera between shoulders.",
+
+
+        CameraStanceDefault = Config.Bind(headerStance, "Default Camera Stance", CameraStanceEnum.Right, new ConfigDescription(
+            "The default camera stance at the start of the raid. Note, the game might adjust the precise position on multiple factors like" +
+            "visibility, ADS, etc.",
+            tags: new ConfigurationManagerAttributes { Order = 5 }
+        ));
+        CameraStanceLeftKey = Config.Bind(headerStance, "Left Side Stance Key", KeyCode.Q, new ConfigDescription(
+            "Switches the camera to the left side.",
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
+        CameraStanceRightKey = Config.Bind(headerStance, "Right Side Stance Key", KeyCode.E, new ConfigDescription(
+            "Switches the camera to the right side.",
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
-        ShoulderSwapCameraOnLeanEnabled = Config.Bind(headerShoulderSwap, "Shoulder Swap Cam On Lean", true, new ConfigDescription(
-            "Swap camera between shoulders based on lean direction.",
+        CameraStanceSwapOnLeanEnabled = Config.Bind(headerStance, "Stance Swap Cam On Lean", true, new ConfigDescription(
+            "Swap the camera based on the lean direction. Note, there's no leaning during running, so you won't be able to always control" +
+            "the stance based purely on the lean direction.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        GunStanceSync = Config.Bind(headerShoulderSwap, "Gun Stance Sync", GunStanceSyncEnum.Cam, new ConfigDescription(
+        GunStanceSync = Config.Bind(headerStance, "Gun Stance Sync", GunStanceSyncEnum.Cam, new ConfigDescription(
             "Sync the Gun Stance (left or right shoulder) to either the Camera Stance, Lean or nothing..",
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-        
-        FovChangeSpeed = Config.Bind(headerMisc, "FOV Change Speed", 0.25f, new ConfigDescription(
-            "How fast to adjust the fov (in seconds).",
+
+        FovChangeSpeed = Config.Bind(headerMisc, "FOV Change Timespan", 0.25f, new ConfigDescription(
+            "The timespan (in seconds) that it takes to adjust the FOV.",
             new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
