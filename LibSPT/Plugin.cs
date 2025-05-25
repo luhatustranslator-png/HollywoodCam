@@ -57,8 +57,9 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<KeyCode> CameraShoulderKey;
     public static ConfigEntry<float> CameraSwitchSpeed;
 
-    public static ConfigEntry<AdsModeEnum> AdsModeBasic;
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
+    public static ConfigEntry<AdsModeEnum> AdsModeBasic;
+    public static ConfigEntry<int> AdsFovBasic;
 
     public static ConfigEntry<bool> CrosshairEnabled;
     public static ConfigEntry<bool> CrosshairAdsOnlyEnabled;
@@ -112,7 +113,7 @@ public class Plugin : BaseUnityPlugin
             "The default PoV to use at the start of the raid.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        ThirdPersonToggleKey = Config.Bind(headerPerspective, "Third Person Toggle Key", KeyCode.None, new ConfigDescription(
+        ThirdPersonToggleKey = Config.Bind(headerPerspective, "3rd Person Toggle Key", KeyCode.None, new ConfigDescription(
             "Set the key that will toggle between first and third person view.",
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
@@ -141,11 +142,18 @@ public class Plugin : BaseUnityPlugin
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
 
-        AdsModeBasic = Config.Bind(headerAiming, "Basic Sight ADS Mode", AdsModeEnum.Shoulder, new ConfigDescription(
-            "Determines the ADS logic for non-optic sights (this is iron, holo, reflex, etc...)."
-        ));
         AdsModeOptic = Config.Bind(headerAiming, "Optic Sight ADS Mode", AdsModeEnum.FirstPerson, new ConfigDescription(
-            "Determines the ADS logic for magnifying optic sights."
+            "Determines the ADS logic for magnifying optic sights.",
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        AdsModeBasic = Config.Bind(headerAiming, "Basic Sight ADS Mode", AdsModeEnum.Shoulder, new ConfigDescription(
+            "Determines the ADS logic for non-optic sights (this is iron, holo, reflex, etc...).",
+            tags: new ConfigurationManagerAttributes { Order = 2 }
+        ));
+        AdsFovBasic = Config.Bind(headerAiming, "3rd Person ADS FoV Change", -25, new ConfigDescription(
+            "How much to change the FoV during ADS in third person. This is relative to the baseline FoV.",
+            new AcceptableValueRange<int>(-100, 100),
+            tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
 
         CrosshairEnabled = Config.Bind(headerCrosshair, "Enable Crosshair", true, new ConfigDescription(

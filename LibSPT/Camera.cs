@@ -302,7 +302,8 @@ public class ThirdPersonView : MonoBehaviour
 
     private void ScopeFoV()
     {
-        var fov = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic ? 35 : _gameSettings.Game.Settings.FieldOfView.Value - 15;
+        var currentScopeIsOptic = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic;
+        var fov = currentScopeIsOptic ? 35 : _gameSettings.Game.Settings.FieldOfView.Value + Plugin.AdsFovBasic.Value;
         SetFoV(fov);
     }
     
