@@ -39,7 +39,7 @@ public enum AdsModeEnum
     None
 }
 
-[BepInPlugin("com.janky.hollywoodcam", "Janky's Lights, Camera and Jank", HollywoodCamVersion)]
+[BepInPlugin("com.janky.hollywoodcam", "Janky's Lights, Camera, Hodor", HollywoodCamVersion)]
 [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
@@ -59,7 +59,8 @@ public class Plugin : BaseUnityPlugin
 
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
     public static ConfigEntry<AdsModeEnum> AdsModeBasic;
-    public static ConfigEntry<int> AdsFovBasic;
+    public static ConfigEntry<int> AdsBasicFovChange;
+    public static ConfigEntry<float> AdsFovChangeTime;
 
     public static ConfigEntry<bool> CrosshairEnabled;
     public static ConfigEntry<bool> CrosshairAdsOnlyEnabled;
@@ -72,7 +73,11 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> CameraStanceSwapOnLeanEnabled;
     public static ConfigEntry<GunStanceSyncEnum> GunStanceSync;
 
-    public static ConfigEntry<float> FovChangeSpeed;
+    public static ConfigEntry<float> SprintCameraSwitchSpeed;
+    public static ConfigEntry<int> SprintFovChange;
+    public static ConfigEntry<float> SprintFovChangeTime;
+    public static ConfigEntry<Vector3> SprintOffsetFactor;
+    
     public static ConfigEntry<float> FlinchScale;
 
     private static ConfigEntry<bool> _loggingEnabled;
@@ -106,8 +111,9 @@ public class Plugin : BaseUnityPlugin
         const string headerAiming = "3. Aiming";
         const string headerCrosshair = "4. Crosshair";
         const string headerStance = "5. Stance Control";
-        const string headerMisc = "6. Misc Flotsam";
-        const string headerDebug = "7. Debug";
+        const string headerSprint = "6. Sprint Camera";
+        const string headerMisc = "7. Misc Flotsam";
+        const string headerDebug = "8. Debug";
 
         PointOfViewDefault = Config.Bind(headerPerspective, "Default PoV", PointOfViewEnum.ThirdPerson, new ConfigDescription(
             "The default PoV to use at the start of the raid.",
@@ -135,8 +141,7 @@ public class Plugin : BaseUnityPlugin
             "Switches between the shoulder and main camera.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-
-        CameraSwitchSpeed = Config.Bind(headerCamera, "Switch Speed", 5f, new ConfigDescription(
+        CameraSwitchSpeed = Config.Bind(headerCamera, "Cam Switch Speed", 5f, new ConfigDescription(
             "How fast the camera switches between positions and stances in m/s. Higher values are faster, lower values are smoother.",
             new AcceptableValueRange<float>(1, 25f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
@@ -144,15 +149,21 @@ public class Plugin : BaseUnityPlugin
 
         AdsModeOptic = Config.Bind(headerAiming, "Optic Sight ADS Mode", AdsModeEnum.FirstPerson, new ConfigDescription(
             "Determines the ADS logic for magnifying optic sights.",
-            tags: new ConfigurationManagerAttributes { Order = 3 }
+            tags: new ConfigurationManagerAttributes { Order = 4 }
         ));
         AdsModeBasic = Config.Bind(headerAiming, "Basic Sight ADS Mode", AdsModeEnum.Shoulder, new ConfigDescription(
             "Determines the ADS logic for non-optic sights (this is iron, holo, reflex, etc...).",
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        AdsBasicFovChange = Config.Bind(headerAiming, "3rd Person ADS FoV Change", -15, new ConfigDescription(
+            "How much to change the FoV during ADS in third person. This is relative to the baseline FoV. Negative values will zoom in." +
+            "The BSG default is -15.",
+            new AcceptableValueRange<int>(-100, 100),
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        AdsFovBasic = Config.Bind(headerAiming, "3rd Person ADS FoV Change", -25, new ConfigDescription(
-            "How much to change the FoV during ADS in third person. This is relative to the baseline FoV.",
-            new AcceptableValueRange<int>(-100, 100),
+        AdsFovChangeTime = Config.Bind(headerAiming, "ADS FOV Change Time", 1f, new ConfigDescription(
+            "The timespan (in seconds) that it takes to adjust the FOV for ADS. The BSG default is 1 second.",
+            new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
 
@@ -197,12 +208,28 @@ public class Plugin : BaseUnityPlugin
             "Sync the Gun Stance (left or right shoulder) to either the Camera Stance, Lean or nothing..",
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-
-        FovChangeSpeed = Config.Bind(headerMisc, "FOV Change Timespan", 0.25f, new ConfigDescription(
-            "The timespan (in seconds) that it takes to adjust the FOV.",
+        
+        SprintCameraSwitchSpeed = Config.Bind(headerSprint, "Sprint Camera Switch Speed", 1.5f, new ConfigDescription(
+            "How fast the camera switches to the sprint position and back.",
+            new AcceptableValueRange<float>(0.5f, 25f),
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
+        SprintFovChange = Config.Bind(headerSprint, "Sprint FoV Change", 15, new ConfigDescription(
+            "How much to change the FoV during sprinting in third person. This is relative to the baseline FoV. Positive numbers open up the FoV for" +
+            "more peripheral vision. Negative numbers apply tunnel vision because you are a masochist.",
+            new AcceptableValueRange<int>(-100, 100),
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        SprintFovChangeTime = Config.Bind(headerSprint, "Sprint FOV Change Time", 2f, new ConfigDescription(
+            "The timespan (in seconds) that it takes to adjust the FOV for sprinting.",
             new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
+        SprintOffsetFactor = Config.Bind(headerSprint, "Sprint Cam Offset Factor", new Vector3(0f, 1.5f, 2.0f), new ConfigDescription(
+            "Multiplies the current camera position offsets when sprinting. In practice, it's for moving the camera further back .",
+            tags: new ConfigurationManagerAttributes { Order = 1 }
+        ));
+
         FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.1f, new ConfigDescription(
             "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you feel like a bobble head.",
             new AcceptableValueRange<float>(0f, 5f),

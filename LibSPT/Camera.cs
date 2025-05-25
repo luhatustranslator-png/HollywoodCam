@@ -255,21 +255,25 @@ public class ThirdPersonView : MonoBehaviour
         };
         desiredCameraOffset.x *= _cameraStance;
 
+        var cameraSpeed = Plugin.CameraSwitchSpeed.Value;
+        
         if (localPlayer.IsSprintEnabled)
         {
             if (!_sprintFlag)
-                AdjustFoV(15);
-            desiredCameraOffset.x = 0f;
-            desiredCameraOffset.z *= 2f;
-            desiredCameraOffset.y *= 1.5f;
+                AdjustFoV(Plugin.SprintFovChange.Value, Plugin.SprintFovChangeTime.Value);
+            
+            desiredCameraOffset.Scale(Plugin.SprintOffsetFactor.Value);
+            cameraSpeed = Plugin.SprintCameraSwitchSpeed.Value;
         }
         else if (_sprintFlag)
+        {
             ResetFoV();
-        
+        }
+
         _sprintFlag = localPlayer.IsSprintEnabled;
         
         localPlayer.CameraPosition.localPosition = Vector3.Lerp(
-            localPlayer.CameraPosition.localPosition, desiredCameraOffset, Time.deltaTime * Plugin.CameraSwitchSpeed.Value
+            localPlayer.CameraPosition.localPosition, desiredCameraOffset, Time.deltaTime * cameraSpeed
         );
     }
 
@@ -303,23 +307,23 @@ public class ThirdPersonView : MonoBehaviour
     private void ScopeFoV()
     {
         var currentScopeIsOptic = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic;
-        var fov = currentScopeIsOptic ? 35 : _gameSettings.Game.Settings.FieldOfView.Value + Plugin.AdsFovBasic.Value;
+        var fov = currentScopeIsOptic ? 35 : _gameSettings.Game.Settings.FieldOfView.Value + Plugin.AdsBasicFovChange.Value;
         SetFoV(fov);
     }
     
-    private void AdjustFoV(int adjustment)
+    private void AdjustFoV(int adjustment, float time)
     {
-        CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value + adjustment, Plugin.FovChangeSpeed.Value);
+        CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value + adjustment, time);
     }
     
     private static void SetFoV(int fov)
     {
-        CameraClass.Instance.SetFov(fov, Plugin.FovChangeSpeed.Value);
+        CameraClass.Instance.SetFov(fov, Plugin.AdsFovChangeTime.Value);
     }
     
     private void ResetFoV()
     {
-        CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value, Plugin.FovChangeSpeed.Value);
+        CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value, Plugin.AdsFovChangeTime.Value);
     }
 
     public void OnGUI()
