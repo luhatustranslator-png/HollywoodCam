@@ -116,6 +116,7 @@ public class ThirdPersonView : MonoBehaviour
     
     private bool _aimFlag;
     private bool _sprintFlag;
+    private Vector3 _cameraVelocity = Vector3.zero;
     
     private SharedGameSettingsClass _gameSettings;
     private static readonly CustomAnimStrategy CustomAnimStrategy = new();
@@ -285,8 +286,8 @@ public class ThirdPersonView : MonoBehaviour
 
         var collisionDetected = TryHandleCollisions(desiredCameraOffset, out var actualCameraOffset);
         
-        localPlayer.CameraPosition.localPosition = Vector3.Lerp(
-            localPlayer.CameraPosition.localPosition, actualCameraOffset, Time.deltaTime * cameraSpeed
+        localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
+            localPlayer.CameraPosition.localPosition, actualCameraOffset, ref _cameraVelocity, Time.deltaTime, Plugin.CameraSwitchSpeed.Value
         );
         
         // if (collisionDetected)

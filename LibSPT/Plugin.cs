@@ -92,7 +92,7 @@ public class Plugin : BaseUnityPlugin
         new PlayerConstructorPostFixPatch().Enable();
         new PlayerShotReactionsPostFixPatch().Enable();
         new PlayerOnLeanPostfixPatch().Enable();
-
+        
         if (_loggingEnabled.Value)
         {
             Log.LogInfo("Logging enabled");
