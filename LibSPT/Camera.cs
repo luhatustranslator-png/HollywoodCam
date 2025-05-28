@@ -1,6 +1,8 @@
 ﻿using Comfort.Common;
 using EFT;
 using EFT.Animations;
+using EFT.UI;
+using HarmonyLib;
 using UnityEngine;
 
 namespace HollywoodCam;
@@ -19,199 +21,41 @@ public static class CameraExtensions
     }
 }
 
-/// <summary>
-/// This class is a carbon copy of GClass889, with the exception of ProcessEffectors and ApplyTransformations that come from GClass888.
-/// The 889 is used for third person view and 888 is first person. By default, the third person strategy doesn't apply proper recoil forces.
-/// </summary>
-public class CustomAnimStrategy : GInterface38
-{
-    public void ApplyCameraTransformations(ProceduralWeaponAnimation pwa, float dt)
-    {
-    }
-
-    public void ProcessEffectors(ProceduralWeaponAnimation pwa, float deltaTime, int nFixedFrames = 1)
-    {
-        if (nFixedFrames < 0 || pwa.HandsContainer.WeaponRootAnim == null || !pwa.enabled || Mathf.Approximately(deltaTime, 0.0f))
-            return;
-
-        deltaTime /= nFixedFrames;
-
-        for (var index = 0; index < nFixedFrames; ++index)
-        {
-            if ((pwa.Mask & EProceduralAnimationMask.MotionReaction) != 0)
-            {
-                pwa.MotionReact.FixedTracking(deltaTime);
-                pwa.MotionReact.Process(deltaTime);
-            }
-
-            if ((pwa.Mask & EProceduralAnimationMask.ForceReaction) != 0)
-                pwa.ForceReact.Process(deltaTime);
-            if ((pwa.Mask & EProceduralAnimationMask.Breathing) != 0)
-                pwa.Breath.Process(deltaTime);
-            if ((pwa.Mask & EProceduralAnimationMask.Walking) != 0)
-                pwa.Walk.Process(deltaTime);
-            if ((pwa.Mask & EProceduralAnimationMask.HandShake) != 0)
-                pwa.HandShakeEffector.Process(deltaTime);
-            if ((pwa.Mask & EProceduralAnimationMask.DrawDown) == 0 || pwa.ActiveBlends.Count > 0)
-                pwa.TurnAway.OverlapDepth = 0.0f;
-            pwa.TurnAway.LeftStance = pwa.LeftStance;
-            pwa.TurnAway.InMountState = pwa.IsMountedState;
-            pwa.TurnAway.Process(deltaTime);
-            pwa.HandsContainer.HandsPosition.FixedUpdate(deltaTime);
-            pwa.HandsContainer.HandsRotation.FixedUpdate(deltaTime);
-            pwa.HandsContainer.SwaySpring.Process(deltaTime);
-            pwa.Shootingg.CurrentRecoilEffect.FixedUpdate(deltaTime);
-        }
-    }
-
-    public void ApplyTransformations(ProceduralWeaponAnimation pwa, float dt)
-    {
-        pwa.ZeroAdjustments();
-        pwa.UpdateAimWeight(dt);
-        pwa.BlendAnimatorPose(dt);
-        pwa.ApplyPosition();
-        // NB: This line enables the proper recoil response. In the regular third person strategy, BSG uses ApplySimpleRotation
-        pwa.ApplyComplexRotation(dt);
-        pwa.ApplyTacticalReloadTransformations();
-        pwa.AvoidObstacles();
-    }
-
-    public void LateTransformations(ProceduralWeaponAnimation pwa, float dt)
-    {
-    }
-
-    public void ApplyFovAdjustments(ProceduralWeaponAnimation proceduralWeaponAnimation, Player player)
-    {
-        player.RibcageScaleCurrent = 1f;
-    }
-
-    public void ResetFovAdjustments(ProceduralWeaponAnimation proceduralWeaponAnimation, Player player)
-    {
-        if (Mathf.Approximately(player.PlayerBones.Ribcage.Original.localScale.z, 1f))
-            return;
-        player.PlayerBones.Ribcage.Original.localScale = Vector3.one;
-        player.HandsController.HandsHierarchy.Self.localScale = Vector3.one;
-    }
-
-    public void OpticCalibration(ProceduralWeaponAnimation proceduralWeaponAnimation, bool calibrate)
-    {
-    }
-
-    public float UpdatePossibleTilt(ProceduralWeaponAnimation proceduralWeaponAnimation, float smoothedCharacterMovementSpeed,
-        float smoothedPoseLevel)
-    {
-        var a = proceduralWeaponAnimation.TiltBlender.Value;
-        return a < 1.0 ? Mathf.Max(a, ProceduralWeaponAnimation.GClass2597.GetValue(smoothedCharacterMovementSpeed, smoothedPoseLevel)) : a;
-    }
-}
-
 public class ThirdPersonView : MonoBehaviour
 {
     public Player localPlayer;
+    
+    private Player.ItemHandsController _handsController;
+    private Player.FirearmController _firearmController;
 
     private bool _thirdPersonEnabled;
     private CameraPositionEnum _cameraPosition;
     private int _cameraStance;
-    private LayerMask _hitMask;
-    
+
+    private LayerMask _hitMaskRoot;
+    private LayerMask _hitMaskTarget;
+
     private bool _aimFlag;
     private bool _sprintFlag;
+    private EPointOfView _currentPointOfView;
     private Vector3 _cameraVelocity = Vector3.zero;
-    
+
     private SharedGameSettingsClass _gameSettings;
     private static readonly CustomAnimStrategy CustomAnimStrategy = new();
-    
-    private float _origLootRaycastDistance = 1f;
-    private float _origDoorRaycastDistance = 0.75f;
-    private float _origPlayerRaycastDistance = 2.5f;
 
     public void Awake()
     {
+        _currentPointOfView = EPointOfView.FirstPerson;
         _thirdPersonEnabled = Plugin.PointOfViewDefault.Value == PointOfViewEnum.ThirdPerson;
         _cameraPosition = Plugin.CameraPositionDefault.Value;
         _cameraStance = (int)Plugin.CameraStanceDefault.Value;
 
-        // Remove players from this to avoid colliding with ourselves, duh
-        _hitMask = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider")); 
+        // Hit mask for the aim target
+        _hitMaskTarget = GClass3449.HitMask.value;
+        // Hit mask for the camera root. Remove players from this to avoid colliding with ourselves, duh
+        _hitMaskRoot = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
 
         _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
-
-        _origLootRaycastDistance = EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE;
-        _origDoorRaycastDistance = EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE;
-        _origPlayerRaycastDistance = EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE;
-    }
-
-    public void Update()
-    {
-        HandleInputs();
-
-        var handsController = localPlayer.HandsController as Player.ItemHandsController;
-        if (handsController == null || localPlayer.CameraPosition == null)
-            return;
-        
-        if (!_thirdPersonEnabled)
-        {
-            if (localPlayer.PointOfView != EPointOfView.ThirdPerson) return;
-
-            UpdatePointOfView(EPointOfView.FirstPerson);
-            return;
-        }
-
-        var adsModeSelected = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic ? Plugin.AdsModeOptic.Value : Plugin.AdsModeBasic.Value; 
-        
-        switch (adsModeSelected)
-        {
-            case AdsModeEnum.FirstPerson:
-            {
-                switch (handsController.IsAiming)
-                {
-                    case true when localPlayer.PointOfView == EPointOfView.FirstPerson:
-                        return;
-                    case true when localPlayer.PointOfView == EPointOfView.ThirdPerson:
-                        UpdatePointOfView(EPointOfView.FirstPerson);
-                        return;
-                }
-
-                break;
-            }
-            case AdsModeEnum.Shoulder:
-            {
-                switch (handsController.IsAiming)
-                {
-                    case true when !_aimFlag:
-                        _cameraPosition = CameraPositionEnum.Shoulder;
-                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0.025f);
-                        ScopeFoV();
-                        break;
-                    case false when _aimFlag && _cameraPosition == CameraPositionEnum.Shoulder:
-                        _cameraPosition = Plugin.CameraPositionDefault.Value;
-                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
-                        ResetFoV();
-                        break;
-                }
-                break;
-            }
-            case AdsModeEnum.None:
-                switch (handsController.IsAiming)
-                {
-                    case true when !_aimFlag:
-                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0.025f);
-                        ScopeFoV();
-                        break;
-                    case false when _aimFlag:
-                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
-                        ResetFoV();
-                        break;
-                }
-                break;
-            default:
-                Plugin.Log.LogError($"Unknown ADS mode selected: {adsModeSelected}");
-                break;
-        }
-        
-        _aimFlag = handsController.IsAiming;
-        
-        HandleThirdPerson();
     }
 
     private void HandleInputs()
@@ -221,19 +65,98 @@ public class ThirdPersonView : MonoBehaviour
 
         if (Input.GetKeyDown(Plugin.CameraShoulderKey.Value))
             _cameraPosition = _cameraPosition != CameraPositionEnum.Shoulder ? CameraPositionEnum.Shoulder : Plugin.CameraPositionDefault.Value;
-        
+
         if (Input.GetKeyDown(Plugin.CameraStanceLeftKey.Value))
             _cameraStance = -1;
-        
+
         if (Input.GetKeyDown(Plugin.CameraStanceRightKey.Value))
             _cameraStance = 1;
     }
-    
+
+    public void Update()
+    {
+        HandleInputs();
+
+        if (localPlayer.CameraPosition == null)
+            return;
+        
+        _handsController = localPlayer.HandsController as Player.ItemHandsController;
+        _firearmController = localPlayer.HandsController as Player.FirearmController;
+
+        var isAiming = _handsController != null && _handsController.IsAiming;
+
+        if (!_thirdPersonEnabled)
+        {
+            if (_currentPointOfView != EPointOfView.ThirdPerson) return;
+
+            UpdatePointOfView(EPointOfView.FirstPerson);
+            return;
+        }
+
+        var adsModeSelected = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic ? Plugin.AdsModeOptic.Value : Plugin.AdsModeBasic.Value;
+
+        switch (adsModeSelected)
+        {
+            case AdsModeEnum.FirstPerson:
+            {
+                switch (isAiming)
+                {
+                    case true when _currentPointOfView == EPointOfView.FirstPerson:
+                        return;
+                    case true when _currentPointOfView == EPointOfView.ThirdPerson:
+                        UpdatePointOfView(EPointOfView.FirstPerson);
+                        return;
+                }
+
+                break;
+            }
+            case AdsModeEnum.Shoulder:
+            {
+                switch (isAiming)
+                {
+                    case true when !_aimFlag:
+                        _cameraPosition = CameraPositionEnum.Shoulder;
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0);
+                        ScopeFoV();
+                        break;
+                    case false when _aimFlag && _cameraPosition == CameraPositionEnum.Shoulder:
+                        _cameraPosition = Plugin.CameraPositionDefault.Value;
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
+                        ResetFoV();
+                        break;
+                }
+
+                break;
+            }
+            case AdsModeEnum.None:
+                switch (isAiming)
+                {
+                    case true when !_aimFlag:
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0);
+                        ScopeFoV();
+                        break;
+                    case false when _aimFlag:
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
+                        ResetFoV();
+                        break;
+                }
+
+                break;
+            default:
+                Plugin.Log.LogError($"Unknown ADS mode selected: {adsModeSelected}");
+                break;
+        }
+
+        _aimFlag = isAiming;
+
+        HandleThirdPerson();
+    }
+
     private void HandleThirdPerson()
     {
-        if (localPlayer.PointOfView != EPointOfView.ThirdPerson)
+        if (_currentPointOfView != EPointOfView.ThirdPerson)
         {
-            UpdatePointOfView(EPointOfView.ThirdPerson);   
+            UpdatePointOfView(EPointOfView.ThirdPerson);
         }
 
         if (Plugin.CameraStanceSwapOnLeanEnabled.Value)
@@ -243,37 +166,35 @@ public class ThirdPersonView : MonoBehaviour
                 < 0 => -1,
                 > 0 => 1,
                 _ => _cameraStance
-            };            
+            };
         }
-        
+
         if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
         {
-            var firearmController = localPlayer.HandsController as Player.FirearmController;
-
-            if (firearmController != null)
+            if (_firearmController != null)
             {
                 if ((localPlayer.MovementContext.LeftStanceEnabled && _cameraStance > 0f)
                     || (!localPlayer.MovementContext.LeftStanceEnabled && _cameraStance < 0f))
-                    firearmController.ChangeLeftStance();
-            }            
+                    _firearmController.ChangeLeftStance();
+            }
         }
 
         // The offset vector is passed by value, which means it's safe to modify it here
         var desiredCameraOffset = _cameraPosition switch
         {
-            CameraPositionEnum.Main => ConfinementInterpolated(Plugin.CameraShoulderOffset.Value, Plugin.CameraMainOffset.Value),
+            CameraPositionEnum.Main => Plugin.CameraMainOffset.Value,
             CameraPositionEnum.Shoulder => Plugin.CameraShoulderOffset.Value,
             _ => Plugin.CameraMainOffset.Value
         };
         desiredCameraOffset.x *= _cameraStance;
-        
+
         var cameraSpeed = Plugin.CameraSwitchSpeed.Value;
-        
+
         if (localPlayer.IsSprintEnabled)
         {
             if (!_sprintFlag)
                 AdjustFoV(Plugin.SprintFovChange.Value, Plugin.SprintFovChangeTime.Value);
-            
+
             desiredCameraOffset.Scale(Plugin.SprintOffsetFactor.Value);
             cameraSpeed = Plugin.SprintCameraSwitchSpeed.Value;
         }
@@ -285,11 +206,28 @@ public class ThirdPersonView : MonoBehaviour
         _sprintFlag = localPlayer.IsSprintEnabled;
 
         var collisionDetected = TryHandleCollisions(desiredCameraOffset, out var actualCameraOffset);
-        
+
         localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
             localPlayer.CameraPosition.localPosition, actualCameraOffset, ref _cameraVelocity, Time.deltaTime, Plugin.CameraSwitchSpeed.Value
         );
-        
+
+        // This is a bit motion sickness inducing
+        // if (_sprintFlag)
+        //     return;
+        //
+        // var fc = localPlayer.HandsController as Player.FirearmController;
+        //
+        // if (fc == null)
+        //     return;
+        //
+        // var ray = new Ray(fc.CurrentFireport.position, fc.WeaponDirection);
+        // if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
+        //     return;
+        //
+        // var aimVector = hitInfo.point - localPlayer.CameraPosition.position;
+        //
+        // localPlayer.CameraPosition.rotation = Quaternion.Slerp(localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), Time.deltaTime * 5);
+
         // if (collisionDetected)
         // {
         //     localPlayer.CameraPosition.localPosition = actualCameraOffset;
@@ -311,59 +249,32 @@ public class ThirdPersonView : MonoBehaviour
         var ray = new Ray(parentTransform.position, offsetVector.normalized);
 
         // Try to do a sphere cast first, if that hits nothing, do another raycast as the spherecast might've clipped behind a wall.
-        if (!Physics.SphereCast(ray, 0.25f, out var hitInfo, offsetVector.magnitude, _hitMask))
+        if (!Physics.SphereCast(ray, 0.25f, out var hitInfo, offsetVector.magnitude, _hitMaskRoot))
         {
-            if (!Physics.Raycast(ray, out hitInfo, offsetVector.magnitude, _hitMask))
+            if (!Physics.Raycast(ray, out hitInfo, offsetVector.magnitude, _hitMaskRoot))
             {
                 // We hit nothing, continue with the desired offset as the actual offset
-                actualCameraOffset = desiredCameraOffset; 
+                actualCameraOffset = desiredCameraOffset;
                 return false;
             }
         }
+
         // Find the closest point to the collision on the line between the parent and the desired position 
-        var adjustedWorldPos = ClosestPointOnLine(parentTransform.position, desiredWorldPos, hitInfo.point);
+        var adjustedWorldPos = Geometry.ClosestPointOnLine(parentTransform.position, desiredWorldPos, hitInfo.point);
         // Translate back to local/relative offset
         actualCameraOffset = parentTransform.InverseTransformPoint(adjustedWorldPos);
         return true;
     }
-    
-    private static Vector3 ClosestPointOnLine(Vector3 origin, Vector3 target, Vector3 point)
-    {
-        var vec1 = point - origin;
-        var vec2 = (target - origin).normalized;
-
-        var d = Vector3.Distance(origin, target);
-        var t = Vector3.Dot(vec2, vec1);
-
-        if (t <= 0) 
-            return origin;
-
-        if (t >= d) 
-            return target;
- 
-        var vec3 = vec2 * t;
-
-        return origin + vec3;
-    }
-
-    private static Vector3 ConfinementInterpolated(Vector3 near, Vector3 far)
-    {
-        // TODO: Calculate the confinement score and interpolate between near and far. 
-        return far;
-    }
 
     private void UpdatePointOfView(EPointOfView value)
     {
-        localPlayer.PointOfView = value;
+        UpdatePlayerPointOfView(value);
 
         if (value == EPointOfView.ThirdPerson)
         {
+            ConsoleScreen.Log($"TP Enabled");
             localPlayer.POM.CameraCollider.enabled = false;
-            
-            EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = 100f;
-            EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = 100f;
-            EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = 100f;
-            
+
             // Re-enable recoil and hit reactions in third person
             if (localPlayer.HitReaction != null)
             {
@@ -375,14 +286,48 @@ public class ThirdPersonView : MonoBehaviour
         }
         else
         {
+            ConsoleScreen.Log($"TP Disabled");
             localPlayer.POM.CameraCollider.enabled = true;
-            
-            EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = _origLootRaycastDistance;
-            EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = _origDoorRaycastDistance;
-            EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = _origPlayerRaycastDistance;
-            
             localPlayer.CameraPosition.localPosition = Vector3.zero;
         }
+    }
+
+    private void UpdatePlayerPointOfView(EPointOfView value)
+    {
+        _currentPointOfView = value;
+        localPlayer.PointOfView = value;
+
+        // if (playerBody.PointOfView.Value == value)
+        // return;
+        // playerBody.PointOfView.Value = value;
+        // localPlayer.CalculateScaleValueByFov((int) Singleton<SharedGameSettingsClass>.Instance.Game.Settings.FieldOfView);
+        // localPlayer.SetCompensationScale();
+        // if (value == EPointOfView.ThirdPerson)
+        // localPlayer.PlayerBones.Ribcage.Original.localScale = new Vector3(1f, 1f, 1f);
+        // localPlayer.MovementContext.PlayerAnimatorPointOfView(value);
+        // localPlayer.PointOfViewChanged?.Invoke();
+        // playerBody.UpdatePlayerRenders(value, localPlayer.Side);
+
+        // Update the internal field directly. This bypasses the event handlers that'd mess up camera positioning, etc.
+        // if (value == EPointOfView.ThirdPerson)
+        // {
+        //     localPlayer.PointOfView = value;
+        //
+        //     if (_playerBody == null)
+        //     {
+        //         _playerBody = Traverse.Create(localPlayer).Field("_playerBody").GetValue<PlayerBody>();
+        //     }
+        //
+        //     _playerBody.PointOfView.gparam_0 = EPointOfView.FirstPerson;
+        // }
+        // else
+        // {
+        //     localPlayer.PointOfView = EPointOfView.ThirdPerson;
+        //     localPlayer.PointOfView = EPointOfView.FirstPerson;
+        // }
+        // playerBody.PlayerSide.Value = localPlayer.Side;
+
+        // localPlayer.ProceduralWeaponAnimation.PointOfView = value;
     }
 
     private void ScopeFoV()
@@ -391,17 +336,17 @@ public class ThirdPersonView : MonoBehaviour
         var fov = currentScopeIsOptic ? 35 : _gameSettings.Game.Settings.FieldOfView.Value + Plugin.AdsBasicFovChange.Value;
         SetFoV(fov);
     }
-    
+
     private void AdjustFoV(int adjustment, float time)
     {
         CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value + adjustment, time);
     }
-    
+
     private static void SetFoV(int fov)
     {
         CameraClass.Instance.SetFov(fov, Plugin.AdsFovChangeTime.Value);
     }
-    
+
     private void ResetFoV()
     {
         CameraClass.Instance.SetFov(_gameSettings.Game.Settings.FieldOfView.Value, Plugin.AdsFovChangeTime.Value);
@@ -409,18 +354,16 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
+        if (!Plugin.CrosshairEnabled.Value || _currentPointOfView == EPointOfView.FirstPerson)
             return;
 
-        var firearmController = localPlayer.HandsController as Player.FirearmController;
-
-        if (firearmController == null)
-            return;
-        
-        if (!firearmController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
+        if (_firearmController == null)
             return;
 
-        var ray = new Ray(firearmController.CurrentFireport.position, firearmController.WeaponDirection);
+        if (!_firearmController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
+            return;
+
+        var ray = new Ray(_firearmController.CurrentFireport.position, _firearmController.WeaponDirection);
         if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
             return;
 

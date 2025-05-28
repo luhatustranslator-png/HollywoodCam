@@ -18,11 +18,34 @@ public class GameWorldStartedPostfixPatch : ModulePatch
         // Don't bother in the hideout
         if (__instance is HideoutGameWorld)
             return;
-
+        
         var tpView = __instance.gameObject.AddComponent<ThirdPersonView>();
         tpView.localPlayer = __instance.MainPlayer;
         
         // Disables the stupid jitter when rotating on the trunk
         __instance.MainPlayer.TrunkRotationLimit = 0f;
+
+        StaticData.InRaid = true;
+        StaticData.LocalPlayer = __instance.MainPlayer;
+    }
+}
+
+public class GameWorldDisposePostfixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(GameWorld).GetMethod(nameof(GameWorld.Dispose));
+    }
+
+    [PatchPostfix]
+    // ReSharper disable once InconsistentNaming
+    public static void Prefix()
+    {
+        Plugin.Log.LogInfo("Disposing of static & long lived objects.");
+
+        StaticData.LocalPlayer = null;
+        StaticData.InRaid = false;
+
+        Plugin.Log.LogInfo("Disposing complete.");
     }
 }

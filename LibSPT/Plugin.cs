@@ -79,6 +79,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<Vector3> SprintOffsetFactor;
     
     public static ConfigEntry<float> FlinchScale;
+    public static ConfigEntry<float> InteractionRange;
 
     private static ConfigEntry<bool> _loggingEnabled;
 
@@ -89,9 +90,11 @@ public class Plugin : BaseUnityPlugin
         SetupConfig();
 
         new GameWorldStartedPostfixPatch().Enable();
+        new GameWorldDisposePostfixPatch().Enable();
         new PlayerConstructorPostFixPatch().Enable();
         new PlayerShotReactionsPostFixPatch().Enable();
         new PlayerOnLeanPostfixPatch().Enable();
+        new PlayerBonesShiftWeaponRootPrefixPatch().Enable();
         
         if (_loggingEnabled.Value)
         {
@@ -235,7 +238,23 @@ public class Plugin : BaseUnityPlugin
             new AcceptableValueRange<float>(0f, 5f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-
+        InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 3f, new ConfigDescription(
+            "How far away (in meters) you can interact with objects like doors or adult toy vending machines. This is measured from the camera" +
+            "position, not the player position. If the camera is 2m behind the player, you need at least 3m to get reasonable interaction experience.",
+            new AcceptableValueRange<float>(0f, 25f),
+            tags: new ConfigurationManagerAttributes { Order = 1 }
+        ));
+        InteractionRange.SettingChanged += (s, e) =>
+        {
+            EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = InteractionRange.Value;
+            EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = InteractionRange.Value;
+            EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = InteractionRange.Value;
+        };
+        
+        EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = InteractionRange.Value;
+        EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = InteractionRange.Value;
+        EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = InteractionRange.Value;
+        
         _loggingEnabled = Config.Bind(headerDebug, "Enable Debug Logging", true, new ConfigDescription(
             "Duh. Requires restarting the game to take effect."
         ));
