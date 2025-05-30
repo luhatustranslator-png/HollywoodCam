@@ -100,7 +100,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnimationStrategy.cs" />
+    <Compile Include="CollisionField.cs" />
+    <Compile Include="CollisionDebug.cs" />
     <Compile Include="ConfigurationManagerAttributes.cs" />
+    <Compile Include="Helpers\DebugGizmo.cs" />
+    <Compile Include="Helpers\DebugUI.cs" />
     <Compile Include="Patches\GameWorld.cs" />
     <Compile Include="Patches\Player.cs" />
     <Compile Include="Patches\PlayerBones.cs" />

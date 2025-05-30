@@ -3,6 +3,7 @@ using EFT;
 using EFT.Animations;
 using EFT.UI;
 using HarmonyLib;
+using HollywoodCam.Helpers;
 using UnityEngine;
 
 namespace HollywoodCam;
@@ -24,28 +25,33 @@ public static class CameraExtensions
 public class ThirdPersonView : MonoBehaviour
 {
     public Player localPlayer;
-    
-    private Player.ItemHandsController _handsController;
-    private Player.FirearmController _firearmController;
 
+    // Static Config
+    private LayerMask _hitMaskRoot;
+    private LayerMask _hitMaskTarget;
+    private readonly Vector3 _rootCameraOffset = new(0f, 0.15f, 0f);
+
+    // State
     private bool _thirdPersonEnabled;
     private CameraPositionEnum _cameraPosition;
     private int _cameraStance;
 
-    private LayerMask _hitMaskRoot;
-    private LayerMask _hitMaskTarget;
-
     private bool _aimFlag;
     private bool _sprintFlag;
-    private EPointOfView _currentPointOfView;
+
     private Vector3 _cameraVelocity = Vector3.zero;
+    private Vector3 _targetPosition = Vector3.zero;
+    private bool _targetValid = false;
+    private CollisionField _collisionField;
+
+    private Player.ItemHandsController _handsController;
+    private Player.FirearmController _firearmController;
 
     private SharedGameSettingsClass _gameSettings;
     private static readonly CustomAnimStrategy CustomAnimStrategy = new();
 
     public void Awake()
     {
-        _currentPointOfView = EPointOfView.FirstPerson;
         _thirdPersonEnabled = Plugin.PointOfViewDefault.Value == PointOfViewEnum.ThirdPerson;
         _cameraPosition = Plugin.CameraPositionDefault.Value;
         _cameraStance = (int)Plugin.CameraStanceDefault.Value;
@@ -56,6 +62,8 @@ public class ThirdPersonView : MonoBehaviour
         _hitMaskRoot = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
 
         _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
+
+        _collisionField = new CollisionField(8, 0.25f, 0.01f, 0.05f);
     }
 
     private void HandleInputs()
@@ -79,15 +87,33 @@ public class ThirdPersonView : MonoBehaviour
 
         if (localPlayer.CameraPosition == null)
             return;
-        
+
         _handsController = localPlayer.HandsController as Player.ItemHandsController;
         _firearmController = localPlayer.HandsController as Player.FirearmController;
+
+        if (_firearmController != null)
+        {
+            var ray = new Ray(_firearmController.CurrentFireport.position, _firearmController.WeaponDirection);
+            if (Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
+            {
+                _targetPosition = hitInfo.point;
+                _targetValid = true;
+            }
+            else
+            {
+                _targetValid = false;
+            }
+        }
+        else
+        {
+            _targetValid = false;
+        }
 
         var isAiming = _handsController != null && _handsController.IsAiming;
 
         if (!_thirdPersonEnabled)
         {
-            if (_currentPointOfView != EPointOfView.ThirdPerson) return;
+            if (localPlayer.PointOfView != EPointOfView.ThirdPerson) return;
 
             UpdatePointOfView(EPointOfView.FirstPerson);
             return;
@@ -101,9 +127,9 @@ public class ThirdPersonView : MonoBehaviour
             {
                 switch (isAiming)
                 {
-                    case true when _currentPointOfView == EPointOfView.FirstPerson:
+                    case true when localPlayer.PointOfView == EPointOfView.FirstPerson:
                         return;
-                    case true when _currentPointOfView == EPointOfView.ThirdPerson:
+                    case true when localPlayer.PointOfView == EPointOfView.ThirdPerson:
                         UpdatePointOfView(EPointOfView.FirstPerson);
                         return;
                 }
@@ -154,7 +180,7 @@ public class ThirdPersonView : MonoBehaviour
 
     private void HandleThirdPerson()
     {
-        if (_currentPointOfView != EPointOfView.ThirdPerson)
+        if (localPlayer.PointOfView != EPointOfView.ThirdPerson)
         {
             UpdatePointOfView(EPointOfView.ThirdPerson);
         }
@@ -188,15 +214,10 @@ public class ThirdPersonView : MonoBehaviour
         };
         desiredCameraOffset.x *= _cameraStance;
 
-        var cameraSpeed = Plugin.CameraSwitchSpeed.Value;
-
         if (localPlayer.IsSprintEnabled)
         {
             if (!_sprintFlag)
                 AdjustFoV(Plugin.SprintFovChange.Value, Plugin.SprintFovChangeTime.Value);
-
-            desiredCameraOffset.Scale(Plugin.SprintOffsetFactor.Value);
-            cameraSpeed = Plugin.SprintCameraSwitchSpeed.Value;
         }
         else if (_sprintFlag)
         {
@@ -205,65 +226,54 @@ public class ThirdPersonView : MonoBehaviour
 
         _sprintFlag = localPlayer.IsSprintEnabled;
 
-        var collisionDetected = TryHandleCollisions(desiredCameraOffset, out var actualCameraOffset);
+        HandleCollision(desiredCameraOffset);
 
-        localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
-            localPlayer.CameraPosition.localPosition, actualCameraOffset, ref _cameraVelocity, Time.deltaTime, Plugin.CameraSwitchSpeed.Value
-        );
+        // This is a bit motion sickness inducing?
+        // TODO: Add a sprint decay factor here that phases out the rotation suppression over 1-2 seconds
+        if (_sprintFlag)
+            return;
 
-        // This is a bit motion sickness inducing
-        // if (_sprintFlag)
-        //     return;
-        //
-        // var fc = localPlayer.HandsController as Player.FirearmController;
-        //
-        // if (fc == null)
-        //     return;
-        //
-        // var ray = new Ray(fc.CurrentFireport.position, fc.WeaponDirection);
-        // if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
-        //     return;
-        //
-        // var aimVector = hitInfo.point - localPlayer.CameraPosition.position;
-        //
-        // localPlayer.CameraPosition.rotation = Quaternion.Slerp(localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), Time.deltaTime * 5);
+        var fc = localPlayer.HandsController as Player.FirearmController;
 
-        // if (collisionDetected)
-        // {
-        //     localPlayer.CameraPosition.localPosition = actualCameraOffset;
-        // }
-        // else
-        // {
-        //                 
-        // }
+        if (fc == null)
+            return;
+
+        var ray = new Ray(fc.CurrentFireport.position, fc.WeaponDirection);
+        if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
+            return;
+
+        var aimVector = hitInfo.point - localPlayer.CameraPosition.position;
+
+        localPlayer.CameraPosition.rotation =
+            Quaternion.Slerp(localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), Time.deltaTime);
     }
 
-    private bool TryHandleCollisions(Vector3 desiredCameraOffset, out Vector3 actualCameraOffset)
+    private void HandleCollision(Vector3 desiredOffset)
     {
         var parentTransform = localPlayer.CameraPosition.parent;
-        // Transform the desired offset to world coordinates
-        var desiredWorldPos = parentTransform.TransformPoint(desiredCameraOffset);
-        // Get the vector between the camera parent and the desired position
-        var offsetVector = desiredWorldPos - parentTransform.position;
-        // Ray cast parameters
-        var ray = new Ray(parentTransform.position, offsetVector.normalized);
+        var rootPos = parentTransform.TransformPoint(_rootCameraOffset);
+        var desiredPos = parentTransform.TransformPoint(desiredOffset);
 
-        // Try to do a sphere cast first, if that hits nothing, do another raycast as the spherecast might've clipped behind a wall.
-        if (!Physics.SphereCast(ray, 0.25f, out var hitInfo, offsetVector.magnitude, _hitMaskRoot))
-        {
-            if (!Physics.Raycast(ray, out hitInfo, offsetVector.magnitude, _hitMaskRoot))
-            {
-                // We hit nothing, continue with the desired offset as the actual offset
-                actualCameraOffset = desiredCameraOffset;
-                return false;
-            }
-        }
+        // var actualPos = desiredPos;
+        // Phase1CollisionSolver(rootPos, ref actualPos, 0.2f, 8, 0.5f);
 
-        // Find the closest point to the collision on the line between the parent and the desired position 
-        var adjustedWorldPos = Geometry.ClosestPointOnLine(parentTransform.position, desiredWorldPos, hitInfo.point);
-        // Translate back to local/relative offset
-        actualCameraOffset = parentTransform.InverseTransformPoint(adjustedWorldPos);
-        return true;
+        // var actualPos = SphereCastBump(desiredPos, rootPos, _hitMaskRoot, 0.2f, 1f);
+        var actualPos = desiredPos;
+
+        var actualOffset = parentTransform.InverseTransformPoint(actualPos);
+
+        localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
+            localPlayer.CameraPosition.localPosition, actualOffset, ref _cameraVelocity, Time.deltaTime, Plugin.CameraSpeed.Value
+        );
+
+        if (!_targetValid)
+            return;
+
+        var rootVector = rootPos - localPlayer.CameraPosition.position;
+        var targetAdj = localPlayer.CameraPosition.position +
+                        rootVector.magnitude * (_targetPosition - localPlayer.CameraPosition.position).normalized;
+
+        _collisionField.Update(localPlayer.CameraPosition, rootPos, targetAdj, _hitMaskRoot, _hitMaskTarget);
     }
 
     private void UpdatePointOfView(EPointOfView value)
@@ -294,7 +304,7 @@ public class ThirdPersonView : MonoBehaviour
 
     private void UpdatePlayerPointOfView(EPointOfView value)
     {
-        _currentPointOfView = value;
+        localPlayer.PointOfView = value;
         localPlayer.PointOfView = value;
 
         // if (playerBody.PointOfView.Value == value)
@@ -354,20 +364,18 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        if (!Plugin.CrosshairEnabled.Value || _currentPointOfView == EPointOfView.FirstPerson)
+        CollisionDebug.DrawCollisionFieldInfo(_collisionField);
+        
+        if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
 
-        if (_firearmController == null)
+        if (_firearmController == null || !_targetValid)
             return;
 
         if (!_firearmController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
             return;
 
-        var ray = new Ray(_firearmController.CurrentFireport.position, _firearmController.WeaponDirection);
-        if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask))
-            return;
-
-        var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(hitInfo.point);
+        var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(_targetPosition);
 
         if (screenPosition == Vector2.zero)
             return;
@@ -385,5 +393,94 @@ public class ThirdPersonView : MonoBehaviour
         GUI.DrawTexture(new Rect(position.x, position.y - size, thickness, size * 2 + thickness), texture);
 
         GUI.color = colorBackup;
+    }
+
+    /*
+     * Attic
+     */
+    private bool Phase1CollisionSolver(Vector3 rootPos, ref Vector3 desiredPos, float radius, int attempts, float alpha)
+    {
+        var bumpFactor = 1f;
+
+        for (var i = 0; i < attempts; i++)
+        {
+            if (Phase1CollisionStep(rootPos, ref desiredPos, radius, bumpFactor))
+                return true;
+
+            bumpFactor *= alpha;
+        }
+
+        return false;
+    }
+
+    private bool Phase1CollisionStep(Vector3 rootPos, ref Vector3 desiredPos, float radius, float bumpFactor)
+    {
+        desiredPos = SphereCastBump(desiredPos, rootPos, _hitMaskRoot, radius, bumpFactor);
+
+        Vector3 targetPosAdj;
+
+        if (_targetValid)
+        {
+            // Offset the target position to avoid noisy collision events as the target position is by definition a collision point
+            targetPosAdj = _targetPosition + 10f * radius * (desiredPos - _targetPosition).normalized;
+            desiredPos = SphereCastBump(desiredPos, targetPosAdj, _hitMaskTarget, radius, bumpFactor);
+        }
+
+        var rootVisible = SphereCastVisCheck(desiredPos, rootPos, radius, _hitMaskRoot);
+
+        if (!_targetValid) return rootVisible;
+
+        // Offset the target position to avoid noisy collision events as the target position is by definition a collision point
+        targetPosAdj = _targetPosition + 10f * radius * (desiredPos - _targetPosition).normalized;
+        var targetVisible = SphereCastVisCheck(desiredPos, targetPosAdj, radius, _hitMaskTarget);
+
+        return rootVisible && targetVisible;
+    }
+
+    private static Vector3 SphereCastBump(Vector3 cameraPos, Vector3 targetPos, LayerMask layerMask, float radius, float bumpFactor)
+    {
+        var backCast = cameraPos - targetPos;
+
+        if (!Physics.SphereCast(targetPos, radius, backCast.normalized, out var hitInfo, backCast.magnitude, layerMask)) return cameraPos;
+
+        var tangentPoint = Geometry.ClosestPointOnLine(targetPos, cameraPos, hitInfo.point);
+        // var bump = tangentPoint - hitInfo.point;
+        // var bumpAmount = radius - bump.magnitude;
+        // return cameraPos + bumpFactor * bumpAmount * bump.normalized;
+        return tangentPoint;
+    }
+
+    private bool TryHandleCollisions(Vector3 desiredCameraOffset, out Vector3 actualCameraOffset)
+    {
+        var parentTransform = localPlayer.CameraPosition.parent;
+        // Transform the desired offset to world coordinates
+        var desiredWorldPos = parentTransform.TransformPoint(desiredCameraOffset);
+        // Get the vector between the camera parent and the desired position
+        var offsetVector = desiredWorldPos - parentTransform.position;
+        // Ray cast parameters
+        var ray = new Ray(parentTransform.position, offsetVector.normalized);
+
+        // Try to do a sphere cast first, if that hits nothing, do another raycast as the spherecast might've clipped behind a wall.
+        if (!Physics.SphereCast(ray, 0.25f, out var hitInfo, offsetVector.magnitude, _hitMaskRoot))
+        {
+            if (!Physics.Raycast(ray, out hitInfo, offsetVector.magnitude, _hitMaskRoot))
+            {
+                // We hit nothing, continue with the desired offset as the actual offset
+                actualCameraOffset = desiredCameraOffset;
+                return false;
+            }
+        }
+
+        // Find the closest point to the collision on the line between the parent and the desired position 
+        var adjustedWorldPos = Geometry.ClosestPointOnLine(parentTransform.position, desiredWorldPos, hitInfo.point);
+        // Translate back to local/relative offset
+        actualCameraOffset = parentTransform.InverseTransformPoint(adjustedWorldPos);
+        return true;
+    }
+
+    private static bool SphereCastVisCheck(Vector3 origin, Vector3 target, float radius, LayerMask layerMask)
+    {
+        var aimVector = target - origin;
+        return Physics.SphereCast(origin, radius, aimVector.normalized, out _, aimVector.magnitude, layerMask);
     }
 }

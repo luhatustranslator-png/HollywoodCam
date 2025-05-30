@@ -1,22 +1,11 @@
 ﻿# Camera Confinement Handling
-* Don't do the complex visibility checking because heuristics will likely result in a twitchy and annoying camera. Let the user
-  deal with swapping to the required position.
-* We'll have two mechanisms to deal with confinement:
-  * Do a bunch of short range raycasts from the first person camera position to determine confinement.
-    * Ignore the player/hitcollider layer.
-    * Spherecast 0.5m diameter backwards, right, left and upwards as far out as the magnitude of the Main Offset.
-      * Calculate the mean confinement score as the average collision point distance and LERP between
-        the Main and Shoulder cam positions between the range of 1/3 and 2/3 of the Main Offset magnitude (0.5m and 1m by def).
-    * Spherecast 0.25m spheres 45 deg up, right, left and down, and raycast forward. Calculate confinement score based on a 2m max.
-      * LERP as above.
-    * This determines the desired position.
-  * Spherecast 0.25m sphere from the base (first person) camera position to the desired position.
-    * Get the closest point on that vector to any collision. If no collision, then we can be at the desired position.
-
-
-# TODO
- - Look at GClass3407.method_1, this seems to take the current camera position, take the Player.CameraPosition as target, and tries
-   to do collision checks (badly).
+## Algorithm
+* Run the advection until one of the following is met:
+  1. The average absolute gradient is lower than some epsilon
+  2. The magnitude of the advection vector is lower than some epsilon
+  3. We exhaust the iteration limit
+* Then do a final spherecast at that point and relocate the camera along the ray as far back as collisions allow (all the way if no collisions).
+ 
 
 ```csharp
 localPlayer.PlayerBones.ShiftWeaponRoot: seems to fuck around with the weapon root? Has a thirdPersonAuthority that seems to adjust
