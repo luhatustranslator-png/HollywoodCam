@@ -45,11 +45,14 @@ public class CollisionField
         _epsGradient = epsGradient;
     }
 
-    public void Update(Transform cameraTransform, Vector3 rootPos, Vector3 targetPos, LayerMask rootMask, LayerMask targetMask)
+    public void Update(Transform cameraTransform, Vector3 eyeCameraPos, Vector3 targetPos, LayerMask eyeMask, LayerMask targetMask)
     {
         var cameraPos = cameraTransform.position;
-
-        CenterValue = (SphereCastDistance(rootPos, cameraPos, rootMask) + SphereCastDistance(targetPos, cameraPos, targetMask)) / 2;
+        // Two casts:
+        // 1. Eye camera position to the desired camera position. Determines how far we can move the camera back before we hit something.
+        // 2. Desired camera position to the target position. Determines how far we can see towards the target before we hit something.
+        // This difference is important, we want to move the camera as far back as possible and we want to maximize how far we see to the target!
+        CenterValue = (SphereCastDistance(eyeCameraPos, cameraPos, eyeMask) + SphereCastDistance(cameraPos, targetPos, targetMask)) / 2;
         AdvectionVector = Vector3.zero;
         AggregateGradient = 0f;
 
@@ -57,7 +60,7 @@ public class CollisionField
         {
             var pointOffset = Points[i];
             var pointPos = cameraTransform.TransformPoint(pointOffset);
-            var value = Values[i] = (SphereCastDistance(rootPos, pointPos, rootMask) + SphereCastDistance(targetPos, pointPos, targetMask)) / 2;
+            var value = Values[i] = (SphereCastDistance(eyeCameraPos, pointPos, eyeMask) + SphereCastDistance(pointPos, targetPos, targetMask)) / 2;
             var gradient = Gradients[i] = value - CenterValue;
             AdvectionVector += pointOffset * gradient;
             AggregateGradient += Mathf.Abs(gradient);
@@ -68,19 +71,20 @@ public class CollisionField
         Success = AdvectionVector.magnitude < _epsAdvection || AggregateGradient < _epsGradient;
     }
 
-    private float SphereCastDistance(Vector3 targetPos, Vector3 cameraPos, LayerMask layerMask)
+    private float SphereCastDistance(Vector3 originPos, Vector3 targetPos, LayerMask layerMask)
     {
-        var aimVector = cameraPos - targetPos;
+        var aimVector = targetPos - originPos;
         var aimVectorMagnitude = aimVector.magnitude;
 
         if (aimVectorMagnitude == 0)
             return 0f;
 
-        if (!Physics.SphereCast(targetPos, SphereCastRadius, aimVector.normalized, out var hitInfo, aimVectorMagnitude, layerMask))
+        if (!Physics.SphereCast(originPos, SphereCastRadius, aimVector.normalized, out var hitInfo, aimVectorMagnitude, layerMask))
             return 1f;
 
-        var tangentPoint = Geometry.ClosestPointOnLine(targetPos, cameraPos, hitInfo.point);
+        var tangentPoint = Geometry.ClosestPointOnLine(originPos, targetPos, hitInfo.point);
 
-        return (tangentPoint - targetPos).magnitude / aimVectorMagnitude;
+        // Square root to concentrate most of the effect to low values.
+        return Mathf.Sqrt((tangentPoint - originPos).magnitude / aimVectorMagnitude);
     }
 }

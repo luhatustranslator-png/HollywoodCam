@@ -1,8 +1,5 @@
 ﻿using Comfort.Common;
 using EFT;
-using EFT.Animations;
-using EFT.UI;
-using HarmonyLib;
 using HollywoodCam.Helpers;
 using UnityEngine;
 
@@ -27,9 +24,10 @@ public class ThirdPersonView : MonoBehaviour
     public Player localPlayer;
 
     // Static Config
-    private LayerMask _hitMaskRoot;
-    private LayerMask _hitMaskTarget;
-    private readonly Vector3 _rootCameraOffset = new(0.05f, 0f, 0f);
+    private LayerMask _eyeCameraHitMask;
+    private LayerMask _targetHitMask;
+    private readonly Vector3 _eyeCameraOffset = new(0f, 0.1f, 0f);
+    private readonly Vector3 _aimOriginOffset = new(0.2f, 0f, 0f);
 
     // State
     private bool _thirdPersonEnabled;
@@ -56,9 +54,9 @@ public class ThirdPersonView : MonoBehaviour
         _cameraStance = (int)Plugin.CameraStanceDefault.Value;
 
         // Hit mask for the aim target
-        _hitMaskTarget = GClass3449.HitMask.value;
+        _targetHitMask = GClass3449.HitMask.value;
         // Hit mask for the camera root. Remove players from this to avoid colliding with ourselves, duh
-        _hitMaskRoot = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
+        _eyeCameraHitMask = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
 
         _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
 
@@ -212,41 +210,46 @@ public class ThirdPersonView : MonoBehaviour
 
     private void HandleCollision(Vector3 desiredOffset)
     {
-        var parentTransform = localPlayer.CameraPosition.parent;
-        var rootPos = parentTransform.TransformPoint(_rootCameraOffset);
-        var desiredPos = parentTransform.TransformPoint(desiredOffset);
-
+        var eyeTransform = localPlayer.CameraPosition.parent;
+        var aimOriginPos = eyeTransform.TransformPoint(_aimOriginOffset);
+        var eyeCameraPos = eyeTransform.TransformPoint(_eyeCameraOffset);
+        var desiredCameraPos = eyeTransform.TransformPoint(desiredOffset);
+        
         // TODO: Collision Handling Here
-        var actualPos = desiredPos;
+        var actualPos = desiredCameraPos;
 
-        var actualOffset = parentTransform.InverseTransformPoint(actualPos);
+        var actualOffset = eyeTransform.InverseTransformPoint(actualPos);
 
         localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
             localPlayer.CameraPosition.localPosition, actualOffset, ref _cameraVelocity, Time.deltaTime, Plugin.CameraSpeed.Value
         );
 
-        var ray = new Ray(rootPos + 0.5f * parentTransform.forward, parentTransform.forward);
-        if (Physics.Raycast(ray, out var hitInfo, 25f, _hitMaskTarget))
+        var ray = new Ray(aimOriginPos, eyeTransform.forward);
+        if (Physics.Raycast(ray, out var hitInfo, 30f, _targetHitMask))
         {
+            // _aimTarget = Geometry.ClosestPointOnLine(aimOriginPos, aimOriginPos + eyeTransform.forward * 24.5f, hitInfo.point);
+            
             // Offset the target back by half a meter so that we don't re-hit the same hit point later.
-            _aimTarget = hitInfo.point - 2f * parentTransform.forward;
-
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                DebugGizmos.Line(rootPos, _aimTarget, Color.white, 0.025f, true, 15f);
-            }
+            _aimTarget = hitInfo.point - 0.5f * eyeTransform.forward;
         }
         else
         {
-            _aimTarget = parentTransform.position + parentTransform.forward * 24.5f;
+            _aimTarget = aimOriginPos + eyeTransform.forward * 29.5f;
         }
 
-        _collisionField.Update(localPlayer.CameraPosition, rootPos, _aimTarget, _hitMaskRoot, _hitMaskTarget);
+        _collisionField.Update(localPlayer.CameraPosition, eyeCameraPos, _aimTarget, _eyeCameraHitMask, _targetHitMask);
+        
+        if (Input.GetKeyDown(KeyCode.F3))
+        {
+            DebugGizmos.Line(aimOriginPos, _aimTarget, Color.white, 0.025f, true, 15f);
+        }
 
         var aimVector = _aimTarget - localPlayer.CameraPosition.position;
 
+        // TODO: Tune this
+        var rotationSpeed = 10 * Mathf.InverseLerp(100f, 900f, aimVector.sqrMagnitude);
         localPlayer.CameraPosition.rotation = Quaternion.Slerp(
-            localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), Time.deltaTime
+            localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), rotationSpeed * Time.deltaTime
         );
     }
 
