@@ -55,7 +55,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<Vector3> CameraMainOffset;
     public static ConfigEntry<Vector3> CameraShoulderOffset;
     public static ConfigEntry<KeyCode> CameraShoulderKey;
-    public static ConfigEntry<float> CameraSpeed;
+    public static ConfigEntry<float> CameraChangeTime;
 
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
     public static ConfigEntry<AdsModeEnum> AdsModeBasic;
@@ -144,9 +144,9 @@ public class Plugin : BaseUnityPlugin
             "Switches between the shoulder and main camera.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        CameraSpeed = Config.Bind(headerCamera, "Cam Switch Speed", 5f, new ConfigDescription(
-            "How fast the camera switches between positions and stances in m/s. Higher values are faster, lower values are smoother.",
-            new AcceptableValueRange<float>(1, 25f),
+        CameraChangeTime = Config.Bind(headerCamera, "Cam Change Time", 1f, new ConfigDescription(
+            "The timespan (in seconds) that it takes for the camera to change between stances and positions.",
+            new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
 

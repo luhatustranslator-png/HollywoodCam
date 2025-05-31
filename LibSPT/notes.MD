@@ -7,11 +7,12 @@
 * Then do a final spherecast at that point and relocate the camera along the ray as far back as collisions allow (all the way if no collisions).
 
 # !!!! TODO !!!!
-Adjust the gradient calculation for the aim target:
-1. Currently we calculate the gradient based on how far we can travel from the aim point towards the camera desired position. This\
-   is not good, because small bumps at the far end can cause this number to suddenly be reduce to minimum.
-2. Instead, we must maximize how far we can travel from the camera to the aim target. This means we'll apply a strong advection if a nearby wall is
-   blocking the view, and zero to no advection if a far wall is blocking it.
+1. CollisionField will be adjusted to work on one target only, and make sure we support both the camera -> target and target -> camera directions.
+2. We'll have a CollisionField for the eye camera and another one for the aim target (which will be smaller)
+3. We calculate an advection vector for each, average them and do a line search along it using a separate (new) class
+4. We find the first unoccluded point on the line, or if there isn't such, then the best position on it.
+5. We do a smoothdamp to that point
+6. Finally, we do a linecast to the camera position after the smoothdamp and if it's still occluded, we force push it to the unoccluded point
 
 ```csharp
 localPlayer.PlayerBones.ShiftWeaponRoot: seems to fuck around with the weapon root? Has a thirdPersonAuthority that seems to adjust

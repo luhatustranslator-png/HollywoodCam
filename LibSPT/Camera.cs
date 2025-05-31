@@ -29,6 +29,10 @@ public class ThirdPersonView : MonoBehaviour
     private readonly Vector3 _eyeCameraOffset = new(0f, 0.1f, 0f);
     private readonly Vector3 _aimOriginOffset = new(0.2f, 0f, 0f);
 
+    private float _aimOriginZBump; 
+    private float _aimOriginZBumpVelocity;
+    private const float AimOriginZBumpMax = 0.25f;
+
     // State
     private bool _thirdPersonEnabled;
     private CameraPositionEnum _cameraPosition;
@@ -210,8 +214,23 @@ public class ThirdPersonView : MonoBehaviour
 
     private void HandleCollision(Vector3 desiredOffset)
     {
+        var aimOriginOffset = _aimOriginOffset;
+        
+        // Switch immediately when the flags are on, but add a SmoothDamp once off to avoid sporadic self collision.
+        if (_aimFlag || _sprintFlag)
+        {
+            _aimOriginZBump = AimOriginZBumpMax;
+            _aimOriginZBumpVelocity = 0f;
+        }
+        else
+        {
+            _aimOriginZBump = Mathf.SmoothDamp(_aimOriginZBump, 0f, ref _aimOriginZBumpVelocity, 0.5f);
+        }
+        
+        aimOriginOffset.z += _aimOriginZBump;
+        
         var eyeTransform = localPlayer.CameraPosition.parent;
-        var aimOriginPos = eyeTransform.TransformPoint(_aimOriginOffset);
+        var aimOriginPos = eyeTransform.TransformPoint(aimOriginOffset);
         var eyeCameraPos = eyeTransform.TransformPoint(_eyeCameraOffset);
         var desiredCameraPos = eyeTransform.TransformPoint(desiredOffset);
         
@@ -221,11 +240,13 @@ public class ThirdPersonView : MonoBehaviour
         var actualOffset = eyeTransform.InverseTransformPoint(actualPos);
 
         localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
-            localPlayer.CameraPosition.localPosition, actualOffset, ref _cameraVelocity, Time.deltaTime, Plugin.CameraSpeed.Value
+            localPlayer.CameraPosition.localPosition, actualOffset, ref _cameraVelocity, 0.2f * Plugin.CameraChangeTime.Value
         );
 
+        var aimTargetHitMask = _sprintFlag ? _eyeCameraHitMask : _targetHitMask;
+        
         var ray = new Ray(aimOriginPos, eyeTransform.forward);
-        if (Physics.Raycast(ray, out var hitInfo, 30f, _targetHitMask))
+        if (Physics.Raycast(ray, out var hitInfo, 30f, aimTargetHitMask))
         {
             // _aimTarget = Geometry.ClosestPointOnLine(aimOriginPos, aimOriginPos + eyeTransform.forward * 24.5f, hitInfo.point);
             
@@ -237,11 +258,18 @@ public class ThirdPersonView : MonoBehaviour
             _aimTarget = aimOriginPos + eyeTransform.forward * 29.5f;
         }
 
-        _collisionField.Update(localPlayer.CameraPosition, eyeCameraPos, _aimTarget, _eyeCameraHitMask, _targetHitMask);
+        _collisionField.Update(localPlayer.CameraPosition, eyeCameraPos, _aimTarget, _eyeCameraHitMask, aimTargetHitMask);
         
         if (Input.GetKeyDown(KeyCode.F3))
         {
             DebugGizmos.Line(aimOriginPos, _aimTarget, Color.white, 0.025f, true, 15f);
+            
+            // for (var i = 0; i < _collisionField.Points.Length; i++)
+            // {
+            //     var point = localPlayer.CameraPosition.TransformPoint(_collisionField.Points[i]);
+            //     
+            //     DebugGizmos.Line(point, _aimTarget, Color.white, 0.01f, true, 15f);
+            // }
         }
 
         var aimVector = _aimTarget - localPlayer.CameraPosition.position;

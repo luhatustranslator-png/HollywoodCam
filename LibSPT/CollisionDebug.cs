@@ -13,7 +13,7 @@ public static class CollisionDebug
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Success: {collisionField.Success}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Ctr Value: {collisionField.CenterValue:f4}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Agg Grad: {collisionField.AggregateGradient:f4}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Adv Vec: {collisionField.AdvectionVector}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Adv Vec: {collisionField.AdvectionVector} > {collisionField.AdvectionVector.magnitude:f4}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SpC Radius: {collisionField.SphereCastRadius}", centered: false);
         DebugUI.Label(new Vector2(50, rect.y + rect.height), "******************************************", centered: false);
 

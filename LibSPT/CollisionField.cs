@@ -48,10 +48,12 @@ public class CollisionField
     public void Update(Transform cameraTransform, Vector3 eyeCameraPos, Vector3 targetPos, LayerMask eyeMask, LayerMask targetMask)
     {
         var cameraPos = cameraTransform.position;
-        // Two casts:
-        // 1. Eye camera position to the desired camera position. Determines how far we can move the camera back before we hit something.
-        // 2. Desired camera position to the target position. Determines how far we can see towards the target before we hit something.
-        // This difference is important, we want to move the camera as far back as possible and we want to maximize how far we see to the target!
+        /*
+         * Two casts:
+         * 1. Eye camera position to the desired camera position. Determines how far we can move the camera back before we hit something.
+         * 2. Desired camera position to the target position. Determines how far we can see towards the target before we hit something.
+         *    This difference is important, we want to move the camera as far back as possible and we want to maximize how far we see to the target!
+         */
         CenterValue = (SphereCastDistance(eyeCameraPos, cameraPos, eyeMask) + SphereCastDistance(cameraPos, targetPos, targetMask)) / 2;
         AdvectionVector = Vector3.zero;
         AggregateGradient = 0f;
@@ -84,7 +86,7 @@ public class CollisionField
 
         var tangentPoint = Geometry.ClosestPointOnLine(originPos, targetPos, hitInfo.point);
 
-        // Square root to concentrate most of the effect to low values.
+        // Square root to concentrate most of the effect to low values and react less to differences between higher values
         return Mathf.Sqrt((tangentPoint - originPos).magnitude / aimVectorMagnitude);
     }
 }
