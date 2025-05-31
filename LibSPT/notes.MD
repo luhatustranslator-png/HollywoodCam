@@ -5,7 +5,11 @@
   2. The magnitude of the advection vector is lower than some epsilon
   3. We exhaust the iteration limit
 * Then do a final spherecast at that point and relocate the camera along the ray as far back as collisions allow (all the way if no collisions).
- 
+
+For the target resolution, use a vector projected from the original/root camera position!
+This avoids the instability from the fireport wiggling and moving about.
+Set a max distance of 25m and a min distance of 1m. If the target is outside of this range, don't include it in the advection.
+This further means that a target is always available outside of the above filtering, we don't need a firearmcontroller etc..*/
 
 ```csharp
 localPlayer.PlayerBones.ShiftWeaponRoot: seems to fuck around with the weapon root? Has a thirdPersonAuthority that seems to adjust

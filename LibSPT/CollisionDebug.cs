@@ -15,7 +15,7 @@ public static class CollisionDebug
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Agg Grad: {collisionField.AggregateGradient:f4}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Adv Vec: {collisionField.AdvectionVector}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SpC Radius: {collisionField.SphereCastRadius}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), "******************************************", centered: false);
+        DebugUI.Label(new Vector2(50, rect.y + rect.height), "******************************************", centered: false);
 
         var center = new Vector2(Screen.width / 2, Screen.height / 2);
         
@@ -26,7 +26,7 @@ public static class CollisionDebug
             var gradient = collisionField.Gradients[i];
 
             // GUI Y axis is flipped...
-            DebugUI.Label(center + 300 * new Vector2(point.x, -1 * point.y), $"{value:f3}/{gradient:f3}");
+            DebugUI.Label(center + 500 * new Vector2(point.x, -1 * point.y), $"{value:f3}/{gradient:f3}");
         }
         
         DebugUI.DrawLine(center, center + 300 * new Vector2(collisionField.AdvectionVector.x, -1 * collisionField.AdvectionVector.y), 2);
