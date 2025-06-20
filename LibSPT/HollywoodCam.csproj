@@ -101,7 +101,7 @@
   <ItemGroup>
     <Compile Include="AnimationStrategy.cs" />
     <Compile Include="Collision\CollisionDebug.cs" />
-    <Compile Include="Collision\GradientMap.cs" />
+    <Compile Include="Collision\GradientScan.cs" />
     <Compile Include="Collision\LineScan.cs" />
     <Compile Include="Collision\CollisionSolver.cs" />
     <Compile Include="Collision\Utils.cs" />

@@ -66,13 +66,11 @@ public class ThirdPersonView : MonoBehaviour
 
         _positionSolver = new PositionSolver(
             new AdvectionSolver(
-                new GradientMapSwap(10, 0.25f),
-                new GradientMap(10, 0.125f),
+                new GradientScanSwap(10, 0.25f),
                 new LineScan(1f, 20)
             ),
             new AdvectionSolver(
-                new GradientMapSwap(8, 0.15f),
-                new GradientMap(8, 0.075f),
+                new GradientScanSwap(8, 0.15f),
                 new LineScan(1f, 20)
             )
         );

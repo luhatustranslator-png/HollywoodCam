@@ -2,7 +2,7 @@
 
 namespace HollywoodCam.Collision;
 
-public class GradientMap
+public class GradientScan
 {
     public readonly Vector3[] Points;
     public readonly float[] Scores;
@@ -19,7 +19,7 @@ public class GradientMap
     private readonly float _epsAdvection;
     private readonly float _epsGradient;
 
-    public GradientMap(int pointCount, float radius = 1f, float epsAdvection = 0.01f, float epsGradient = 0.05f)
+    public GradientScan(int pointCount, float radius = 1f, float epsAdvection = 0.01f, float epsGradient = 0.05f)
     {
         Points = new Vector3[pointCount];
         Scores = new float[pointCount];
@@ -77,8 +77,8 @@ public class GradientMap
     }
 }
 
-public class GradientMapSwap(int pointCount, float radius = 1, float epsAdvection = 0.01f, float epsGradient = 0.05f)
-    : GradientMap(pointCount, radius, epsAdvection, epsGradient)
+public class GradientScanSwap(int pointCount, float radius = 1, float epsAdvection = 0.01f, float epsGradient = 0.05f)
+    : GradientScan(pointCount, radius, epsAdvection, epsGradient)
 {
     protected override SphereCastResult SphereCastDistance(Vector3 originPos, Vector3 targetPos, LayerMask layerMask)
     {
