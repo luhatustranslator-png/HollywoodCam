@@ -2,28 +2,35 @@
 
 namespace HollywoodCam.Collision;
 
-public class AdvectionSolver(GradientScan gradientScan, LineScan lineScan)
+public class AdvectionSolver(CircleScan circleScan, LineScan lineScan)
 {
+    public readonly CircleScan CircleScan = circleScan;
+    public readonly LineScan LineScan = lineScan;
+    
     public Vector3 Solve(
         Transform eyeTransform, Vector3 cameraOffset, Vector3 objectivePos, LayerMask layerMask
     )
     {
-        gradientScan.Update(eyeTransform, cameraOffset, objectivePos, layerMask);
+        CircleScan.Update(eyeTransform, cameraOffset, objectivePos, layerMask);
 
         // There's either no collision or no gradient. We grab the tangent to the central raycast as the desired position.
-        if (gradientScan.Success)
+        if (CircleScan.Success)
         {
-            return gradientScan.CenterPoint;
+            return CircleScan.CenterPoint;
         }
 
-        var lineScanDirection = gradientScan.AdvectionVector.normalized;
+        // var scanDir = CircleScan.AdvectionVector.normalized;
+        var scanDir = CircleScan.AdvectionVector;
+        var scanRadius = CircleScan.SphereCastRadius;
 
-        return lineScan.FindBestPosition(eyeTransform, cameraOffset, lineScanDirection, objectivePos, gradientScan.SphereCastRadius, layerMask);
+        return LineScan.FindBestPosition(eyeTransform, cameraOffset, scanDir, objectivePos, scanRadius, layerMask);
     }
 }
 
 public class PositionSolver(AdvectionSolver phase1, AdvectionSolver phase2)
 {
+    public readonly AdvectionSolver Phase1 = phase1;
+
     // Slow speed solver with large radius
     private Vector3 _phase1Velocity;
 
@@ -34,7 +41,7 @@ public class PositionSolver(AdvectionSolver phase1, AdvectionSolver phase2)
         LayerMask targetMask
     )
     {
-        var phase1Position = phase1.Solve(eyeTransform, desiredCameraOffset, eyeCameraPos, eyeMask);
+        var phase1Position = Phase1.Solve(eyeTransform, desiredCameraOffset, eyeCameraPos, eyeMask);
 
         // Handle possible colliders between the current camera position and the desired target and position ourselves on the target side.
         var cameraPos = eyeTransform.TransformPoint(currentCameraOffset);
@@ -44,9 +51,9 @@ public class PositionSolver(AdvectionSolver phase1, AdvectionSolver phase2)
         }
 
         var phase1Offset = eyeTransform.InverseTransformPoint(phase1Position);
-        
+
         currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase1Offset, ref _phase1Velocity, 0.1f * Plugin.CameraChangeTime.Value);
-        
+
         return currentCameraOffset;
 
         // var phase2Position = phase2.Solve(eyeTransform, currentCameraOffset, eyeCameraPos, targetPos, eyeMask, targetMask);

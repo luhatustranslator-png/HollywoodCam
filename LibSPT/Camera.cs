@@ -66,14 +66,25 @@ public class ThirdPersonView : MonoBehaviour
 
         _positionSolver = new PositionSolver(
             new AdvectionSolver(
-                new GradientScanSwap(10, 0.25f),
-                new LineScan(1f, 20)
+                new CircleScan(10, 0.25f, 2f),
+                new LineScan(0.5f, 20)
             ),
             new AdvectionSolver(
-                new GradientScanSwap(8, 0.15f),
+                new CircleScan(8, 0.15f),
                 new LineScan(1f, 20)
             )
         );
+
+        // _positionSolver = new PositionSolver(
+        //     new AdvectionSolver(
+        //         new GradientScanSwap(10, 0.25f),
+        //         new LineScan(1f, 20)
+        //     ),
+        //     new AdvectionSolver(
+        //         new GradientScan(8, 0.15f),
+        //         new LineScan(1f, 20)
+        //     )
+        // );
     }
 
     private void HandleInputs()
@@ -325,7 +336,7 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        // CollisionDebug.DrawCollisionFieldInfo(_collisionField);
+        CollisionDebug.DrawCollisionFieldInfo(_positionSolver.Phase1.CircleScan);
 
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
