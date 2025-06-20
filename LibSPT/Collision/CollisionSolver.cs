@@ -20,10 +20,10 @@ public class AdvectionSolver(CircleScan circleScan, LineScan lineScan)
         }
 
         // var scanDir = CircleScan.AdvectionVector.normalized;
-        var scanDir = CircleScan.AdvectionVector;
+        var scanOffset = CircleScan.AdvectionVector;
         var scanRadius = CircleScan.SphereCastRadius;
 
-        return LineScan.FindBestPosition(eyeTransform, cameraOffset, scanDir, objectivePos, scanRadius, layerMask);
+        return LineScan.FindBestPosition(eyeTransform, cameraOffset, scanOffset, objectivePos, scanRadius, layerMask);
     }
 }
 
