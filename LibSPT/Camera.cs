@@ -1,6 +1,6 @@
 ﻿using Comfort.Common;
 using EFT;
-using HollywoodCam.Helpers;
+using HollywoodCam.Collision;
 using UnityEngine;
 
 namespace HollywoodCam;
@@ -29,7 +29,7 @@ public class ThirdPersonView : MonoBehaviour
     private readonly Vector3 _eyeCameraOffset = new(0f, 0.1f, 0f);
     private readonly Vector3 _aimOriginOffset = new(0.2f, 0f, 0f);
 
-    private float _aimOriginZBump; 
+    private float _aimOriginZBump;
     private float _aimOriginZBumpVelocity;
     private const float AimOriginZBumpMax = 0.25f;
 
@@ -41,9 +41,9 @@ public class ThirdPersonView : MonoBehaviour
     private bool _aimFlag;
     private bool _sprintFlag;
 
-    private Vector3 _cameraVelocity = Vector3.zero;
     private Vector3 _aimTarget = Vector3.zero;
-    private CollisionField _collisionField;
+
+    private PositionSolver _positionSolver;
 
     private Player.ItemHandsController _handsController;
     private Player.FirearmController _firearmController;
@@ -64,7 +64,18 @@ public class ThirdPersonView : MonoBehaviour
 
         _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
 
-        _collisionField = new CollisionField(8, 0.25f, 0.01f, 0.05f);
+        _positionSolver = new PositionSolver(
+            new AdvectionSolver(
+                new GradientMapSwap(10, 0.25f),
+                new GradientMap(10, 0.125f),
+                new LineScan(1f, 20)
+            ),
+            new AdvectionSolver(
+                new GradientMapSwap(8, 0.15f),
+                new GradientMap(8, 0.075f),
+                new LineScan(1f, 20)
+            )
+        );
     }
 
     private void HandleInputs()
@@ -215,7 +226,7 @@ public class ThirdPersonView : MonoBehaviour
     private void HandleCollision(Vector3 desiredOffset)
     {
         var aimOriginOffset = _aimOriginOffset;
-        
+
         // Switch immediately when the flags are on, but add a SmoothDamp once off to avoid sporadic self collision.
         if (_aimFlag || _sprintFlag)
         {
@@ -226,55 +237,36 @@ public class ThirdPersonView : MonoBehaviour
         {
             _aimOriginZBump = Mathf.SmoothDamp(_aimOriginZBump, 0f, ref _aimOriginZBumpVelocity, 0.5f);
         }
-        
+
         aimOriginOffset.z += _aimOriginZBump;
-        
+
         var eyeTransform = localPlayer.CameraPosition.parent;
         var aimOriginPos = eyeTransform.TransformPoint(aimOriginOffset);
         var eyeCameraPos = eyeTransform.TransformPoint(_eyeCameraOffset);
-        var desiredCameraPos = eyeTransform.TransformPoint(desiredOffset);
-        
-        // TODO: Collision Handling Here
-        var actualPos = desiredCameraPos;
-
-        var actualOffset = eyeTransform.InverseTransformPoint(actualPos);
-
-        localPlayer.CameraPosition.localPosition = Vector3.SmoothDamp(
-            localPlayer.CameraPosition.localPosition, actualOffset, ref _cameraVelocity, 0.2f * Plugin.CameraChangeTime.Value
-        );
 
         var aimTargetHitMask = _sprintFlag ? _eyeCameraHitMask : _targetHitMask;
-        
+
         var ray = new Ray(aimOriginPos, eyeTransform.forward);
-        if (Physics.Raycast(ray, out var hitInfo, 30f, aimTargetHitMask))
+        if (Physics.Raycast(ray, out var hitInfo, 5f, aimTargetHitMask))
         {
             // _aimTarget = Geometry.ClosestPointOnLine(aimOriginPos, aimOriginPos + eyeTransform.forward * 24.5f, hitInfo.point);
-            
+
             // Offset the target back by half a meter so that we don't re-hit the same hit point later.
             _aimTarget = hitInfo.point - 0.5f * eyeTransform.forward;
         }
         else
         {
-            _aimTarget = aimOriginPos + eyeTransform.forward * 29.5f;
+            _aimTarget = aimOriginPos + eyeTransform.forward * 4.5f;
         }
 
-        _collisionField.Update(localPlayer.CameraPosition, eyeCameraPos, _aimTarget, _eyeCameraHitMask, aimTargetHitMask);
-        
-        if (Input.GetKeyDown(KeyCode.F3))
-        {
-            DebugGizmos.Line(aimOriginPos, _aimTarget, Color.white, 0.025f, true, 15f);
-            
-            // for (var i = 0; i < _collisionField.Points.Length; i++)
-            // {
-            //     var point = localPlayer.CameraPosition.TransformPoint(_collisionField.Points[i]);
-            //     
-            //     DebugGizmos.Line(point, _aimTarget, Color.white, 0.01f, true, 15f);
-            // }
-        }
+        var actualDesiredOffset = _positionSolver.Solve(
+            eyeTransform, localPlayer.CameraPosition.localPosition, desiredOffset, eyeCameraPos, _aimTarget, _eyeCameraHitMask, aimTargetHitMask
+        );
 
-        var aimVector = _aimTarget - localPlayer.CameraPosition.position;
+        localPlayer.CameraPosition.localPosition = actualDesiredOffset;
 
         // TODO: Tune this
+        var aimVector = _aimTarget - localPlayer.CameraPosition.position;
         var rotationSpeed = 10 * Mathf.InverseLerp(100f, 900f, aimVector.sqrMagnitude);
         localPlayer.CameraPosition.rotation = Quaternion.Slerp(
             localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), rotationSpeed * Time.deltaTime
@@ -335,11 +327,11 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        CollisionDebug.DrawCollisionFieldInfo(_collisionField);
+        // CollisionDebug.DrawCollisionFieldInfo(_collisionField);
 
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
-        
+
         var aimScreenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(_aimTarget);
         DrawCrosshair(aimScreenPosition, 5, Color.red, 2);
 

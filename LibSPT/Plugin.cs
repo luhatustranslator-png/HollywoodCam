@@ -164,8 +164,8 @@ public class Plugin : BaseUnityPlugin
             new AcceptableValueRange<int>(-100, 100),
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        AdsFovChangeTime = Config.Bind(headerAiming, "ADS FOV Change Time", 1f, new ConfigDescription(
-            "The timespan (in seconds) that it takes to adjust the FOV for ADS. The BSG default is 1 second.",
+        AdsFovChangeTime = Config.Bind(headerAiming, "ADS FoV Change Time", 1f, new ConfigDescription(
+            "The timespan (in seconds) that it takes to adjust the FoV for ADS. The BSG default is 1 second.",
             new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
@@ -234,7 +234,7 @@ public class Plugin : BaseUnityPlugin
         ));
 
         FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.1f, new ConfigDescription(
-            "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you feel like a bobble head.",
+            "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you want to larp a bobble head.",
             new AcceptableValueRange<float>(0f, 5f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));

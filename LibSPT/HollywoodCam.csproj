@@ -100,8 +100,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnimationStrategy.cs" />
-    <Compile Include="CollisionField.cs" />
-    <Compile Include="CollisionDebug.cs" />
+    <Compile Include="Collision\CollisionDebug.cs" />
+    <Compile Include="Collision\GradientMap.cs" />
+    <Compile Include="Collision\LineScan.cs" />
+    <Compile Include="Collision\CollisionSolver.cs" />
+    <Compile Include="Collision\Utils.cs" />
     <Compile Include="ConfigurationManagerAttributes.cs" />
     <Compile Include="Helpers\DebugGizmo.cs" />
     <Compile Include="Helpers\DebugUI.cs" />
