@@ -336,7 +336,7 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        CollisionDebug.DrawCollisionFieldInfo(_positionSolver.Phase1.CircleScan);
+        CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
 
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;

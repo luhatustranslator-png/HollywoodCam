@@ -7,7 +7,7 @@ namespace HollywoodCam.Collision;
 public static class CollisionDebug
 {
     [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
-    public static void DrawCollisionFieldInfo(GradientScan gradientScan)
+    public static void DrawCollisionInfo(GradientScan gradientScan)
     {
         var rect = DebugUI.Label(new Vector2(50, 50), "******************************************", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Success: {gradientScan.Success}", centered: false);
@@ -35,7 +35,7 @@ public static class CollisionDebug
     }
     
     [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
-    public static void DrawCollisionFieldInfo(CircleScan scan)
+    public static void DrawCollisionInfo(CircleScan scan)
     {
         var rect = DebugUI.Label(new Vector2(50, 50), "******************************************", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Success: {scan.Success}", centered: false);
