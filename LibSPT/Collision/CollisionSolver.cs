@@ -41,19 +41,19 @@ public class PositionSolver(
 
     // Slow speed solver with large radius. The chode solver. It's all about the girth.
     private Vector3 _phase1Velocity;
+
     // Fast speed solver with narrow radius. It's all about the technique.
     private Vector3 _phase2Velocity;
 
-    public Vector3 Solve(
-        Transform eyeTransform, Vector3 currentCameraOffset, Vector3 desiredCameraOffset, Vector3 eyePos, Vector3 targetPos, LayerMask eyeMask,
-        LayerMask targetMask
-    )
+    public Vector3 Solve(Transform eyeTransform, Vector3 currentCameraOffset, Vector3 desiredCameraOffset, Vector3 eyePos, LayerMask eyeMask)
     {
         var phase1Offset = ApplySolver(Phase1, eyeTransform, ref currentCameraOffset, desiredCameraOffset, eyePos, eyeMask);
-        currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase1Offset, ref _phase1Velocity, phase1SmoothTime * Plugin.CameraChangeTime.Value);
+        currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase1Offset, ref _phase1Velocity,
+            phase1SmoothTime * Plugin.CameraChangeTime.Value);
 
         var phase2Offset = ApplySolver(Phase2, eyeTransform, ref currentCameraOffset, currentCameraOffset, eyePos, eyeMask);
-        currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase2Offset, ref _phase2Velocity, phase2SmoothTime * Plugin.CameraChangeTime.Value);
+        currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase2Offset, ref _phase2Velocity,
+            phase2SmoothTime * Plugin.CameraChangeTime.Value);
 
         var finalCameraPos = Phase3.Solve(eyeTransform, currentCameraOffset, eyePos, eyeMask);
         return eyeTransform.InverseTransformPoint(finalCameraPos);

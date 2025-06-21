@@ -43,7 +43,7 @@ public class CircleScan
     public void Update(Transform eyeTransform, Vector3 cameraOffset, Vector3 objectivePos, LayerMask layerMask)
     {
         var cameraPos = eyeTransform.TransformPoint(cameraOffset);
-        var result = SphereCastDistance(objectivePos, cameraPos, layerMask);
+        var result = CollisionUtils.SphereCast(objectivePos, cameraPos, SphereCastRadius, layerMask);
         CenterScore = result.Score;
         CenterPoint = result.TangentPoint;
         AdvectionVector = Vector3.zero;
@@ -52,16 +52,11 @@ public class CircleScan
         {
             var pointOffset = Points[i];
             var pointPos = eyeTransform.TransformPoint(cameraOffset + pointOffset);
-            result = SphereCastDistance(objectivePos, pointPos, layerMask);
+            result = CollisionUtils.SphereCast(objectivePos, cameraPos, SphereCastRadius, layerMask);
             Scores[i] = result.Score;
             AdvectionVector += pointOffset.normalized * result.Score;
         }
 
         Success = AdvectionVector.magnitude < Epsilon;
-    }
-
-    protected virtual SphereCastResult SphereCastDistance(Vector3 originPos, Vector3 targetPos, LayerMask layerMask)
-    {
-        return CollisionUtils.SphereCast(originPos, targetPos, SphereCastRadius, layerMask);
     }
 }

@@ -264,7 +264,7 @@ public class ThirdPersonView : MonoBehaviour
         }
 
         var actualDesiredOffset = _positionSolver.Solve(
-            eyeTransform, localPlayer.CameraPosition.localPosition, desiredOffset, eyeCameraPos, _aimTarget, _eyeCameraHitMask, aimTargetHitMask
+            eyeTransform, localPlayer.CameraPosition.localPosition, desiredOffset, eyeCameraPos, _eyeCameraHitMask
         );
 
         localPlayer.CameraPosition.localPosition = actualDesiredOffset;
