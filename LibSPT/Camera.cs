@@ -1,6 +1,7 @@
 ﻿using Comfort.Common;
 using EFT;
 using HollywoodCam.Collision;
+using HollywoodCam.Helpers;
 using UnityEngine;
 
 namespace HollywoodCam;
@@ -66,25 +67,18 @@ public class ThirdPersonView : MonoBehaviour
 
         _positionSolver = new PositionSolver(
             new AdvectionSolver(
+                new CircleScan(12, 0.7f, 2f),
+                new LineScan(1.0f, 0.05f)
+            ),
+            new AdvectionSolver(
                 new CircleScan(10, 0.25f, 2f),
                 new LineScan(0.5f, 0.025f)
             ),
             new AdvectionSolver(
-                new CircleScan(8, 0.15f),
-                new LineScan(1f, 20)
-            )
+                new CircleScan(8, 0.1f, 2f),
+                new LineScan(0.25f, 0.015f)
+            ), 0.2f, 0.05f
         );
-
-        // _positionSolver = new PositionSolver(
-        //     new AdvectionSolver(
-        //         new GradientScanSwap(10, 0.25f),
-        //         new LineScan(1f, 20)
-        //     ),
-        //     new AdvectionSolver(
-        //         new GradientScan(8, 0.15f),
-        //         new LineScan(1f, 20)
-        //     )
-        // );
     }
 
     private void HandleInputs()
@@ -102,8 +96,9 @@ public class ThirdPersonView : MonoBehaviour
             _cameraStance = 1;
     }
 
-    public void Update()
+    public void LateUpdate()
     {
+        // NB: Has to be LateUpdate as doing all this in Update can cause the camera to occasionally clip into the wall when mousing violently.
         HandleInputs();
 
         if (localPlayer.CameraPosition == null)
@@ -338,6 +333,14 @@ public class ThirdPersonView : MonoBehaviour
     {
         CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
 
+        // var rect = DebugUI.Label(new Vector2(50, 50), "******************************************", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Input Desired: {_positionSolver.DesiredCamOffset} -> {_positionSolver.DesiredCamOffset.magnitude}", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 1 Desired: {_positionSolver.Phase1Offset} -> {_positionSolver.Phase1Offset.magnitude}", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 1 Damp: {_positionSolver.Phase1CamOffset} -> {_positionSolver.Phase1CamOffset.magnitude}", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Desired: {_positionSolver.Phase2Offset} -> {_positionSolver.Phase2Offset.magnitude}", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Damp: {_positionSolver.Phase2CamOffset} -> {_positionSolver.Phase2CamOffset.magnitude}", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 3: {_positionSolver.Phase3Offset} -> {_positionSolver.Phase3Offset.magnitude}", centered: false);
+        
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
 
