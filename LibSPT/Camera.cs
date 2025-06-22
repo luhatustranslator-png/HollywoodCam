@@ -1,6 +1,8 @@
 ﻿using Comfort.Common;
 using EFT;
+using HarmonyLib;
 using HollywoodCam.Collision;
+using HollywoodCam.Helpers;
 using UnityEngine;
 
 namespace HollywoodCam;
@@ -25,18 +27,13 @@ public class ThirdPersonView : MonoBehaviour
 
     // Static Config
     private LayerMask _eyeCameraHitMask;
-    private LayerMask _targetHitMask;
     private readonly Vector3 _eyeCameraOffset = new(0f, 0.1f, 0f);
-    private readonly Vector3 _aimOriginOffset = new(0.2f, 0f, 0f);
-
-    private float _aimOriginZBump;
-    private float _aimOriginZBumpVelocity;
-    private const float AimOriginZBumpMax = 0.25f;
 
     // State
     private bool _thirdPersonEnabled;
     private CameraPositionEnum _cameraPosition;
     private int _cameraStance;
+    private Vector3 _currentOffset;
 
     private bool _aimFlag;
     private bool _sprintFlag;
@@ -55,8 +52,6 @@ public class ThirdPersonView : MonoBehaviour
         _cameraPosition = Plugin.CameraPositionDefault.Value;
         _cameraStance = (int)Plugin.CameraStanceDefault.Value;
 
-        // Hit mask for the aim target
-        _targetHitMask = GClass3449.HitMask.value;
         // Hit mask for the camera root. Remove players from this to avoid colliding with ourselves, duh
         _eyeCameraHitMask = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
 
@@ -114,7 +109,9 @@ public class ThirdPersonView : MonoBehaviour
             return;
         }
 
-        var adsModeSelected = localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic ? Plugin.AdsModeOptic.Value : Plugin.AdsModeBasic.Value;
+        var adsModeSelected = _firearmController != null && localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic
+            ? Plugin.AdsModeOptic.Value
+            : Plugin.AdsModeBasic.Value;
 
         switch (adsModeSelected)
         {
@@ -226,39 +223,26 @@ public class ThirdPersonView : MonoBehaviour
 
     private void HandleCollision(Vector3 desiredOffset)
     {
-        var aimOriginOffset = _aimOriginOffset;
-
-        // Switch immediately when the flags are on, but add a SmoothDamp once off to avoid sporadic self collision.
-        if (_aimFlag || _sprintFlag)
-        {
-            _aimOriginZBump = AimOriginZBumpMax;
-            _aimOriginZBumpVelocity = 0f;
-        }
-        else
-        {
-            _aimOriginZBump = Mathf.SmoothDamp(_aimOriginZBump, 0f, ref _aimOriginZBumpVelocity, 0.5f);
-        }
-
-        aimOriginOffset.z += _aimOriginZBump;
-
         var eyeTransform = localPlayer.CameraPosition.parent;
         var eyeCameraPos = eyeTransform.TransformPoint(_eyeCameraOffset);
 
-        var actualDesiredOffset = _positionSolver.Solve(
-            eyeTransform, localPlayer.CameraPosition.localPosition, desiredOffset, eyeCameraPos, _eyeCameraHitMask
+        _currentOffset = _positionSolver.Solve(
+            eyeTransform, _currentOffset, desiredOffset, eyeCameraPos, _eyeCameraHitMask
         );
 
-        localPlayer.CameraPosition.localPosition = actualDesiredOffset;
+        localPlayer.CameraPosition.localPosition = _currentOffset;
     }
 
     private void UpdatePointOfView(EPointOfView value)
     {
-        UpdatePlayerPointOfView(value);
+        localPlayer.PointOfView = value;
+        // We force weapon handling to be first person. This allows optic sight rendering to work correctly (they don't render properly otherwise).
+        localPlayer.ProceduralWeaponAnimation.PointOfView = EPointOfView.FirstPerson;
 
         if (value == EPointOfView.ThirdPerson)
         {
             localPlayer.POM.CameraCollider.enabled = false;
-            
+
             // Squash any shenanigans with tilted cameras due to leaning
             localPlayer.CameraPosition.localRotation = Quaternion.identity;
 
@@ -274,13 +258,8 @@ public class ThirdPersonView : MonoBehaviour
         else
         {
             localPlayer.POM.CameraCollider.enabled = true;
-            localPlayer.CameraPosition.localPosition = Vector3.zero;
+            localPlayer.CameraPosition.localPosition = _currentOffset = Vector3.zero;
         }
-    }
-
-    private void UpdatePlayerPointOfView(EPointOfView value)
-    {
-        localPlayer.PointOfView = value;
     }
 
     private void ScopeFoV()
@@ -307,6 +286,7 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
+        // TODO: Add debug printout toggle to the plugin and write this out if toggled on. 
         // CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
 
         // var rect = DebugUI.Label(new Vector2(50, 50), "******************************************", centered: false);
@@ -317,9 +297,23 @@ public class ThirdPersonView : MonoBehaviour
         // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Damp: {_positionSolver.Phase2CamOffset} -> {_positionSolver.Phase2CamOffset.magnitude}", centered: false);
         // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 3: {_positionSolver.Phase3Offset} -> {_positionSolver.Phase3Offset.magnitude}", centered: false);
 
-        // var rect = DebugUI.Label(new Vector2(50, 50), $"{localPlayer.CameraPosition.rotation} {localPlayer.CameraPosition.localRotation}", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $": {_aimVector} -> {_lookVector}", centered: false);
-        
+        var pwa = localPlayer.ProceduralWeaponAnimation;
+        var pwaStrat = Traverse.Create(pwa).Field("_strategy").GetValue();
+
+        var rect = DebugUI.Label(new Vector2(50, 50),
+            $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+            $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}",
+            centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+            $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+            $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
+
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
 
