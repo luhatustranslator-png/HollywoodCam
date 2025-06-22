@@ -52,7 +52,7 @@ public class CircleScan
         {
             var pointOffset = Points[i];
             var pointPos = eyeTransform.TransformPoint(cameraOffset + pointOffset);
-            result = CollisionUtils.SphereCast(objectivePos, cameraPos, SphereCastRadius, layerMask);
+            result = CollisionUtils.SphereCast(objectivePos, pointPos, SphereCastRadius, layerMask);
             Scores[i] = result.Score;
             AdvectionVector += pointOffset.normalized * result.Score;
         }
