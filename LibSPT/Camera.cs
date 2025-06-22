@@ -1,7 +1,6 @@
 ﻿using Comfort.Common;
 using EFT;
 using HollywoodCam.Collision;
-using HollywoodCam.Helpers;
 using UnityEngine;
 
 namespace HollywoodCam;
@@ -41,8 +40,6 @@ public class ThirdPersonView : MonoBehaviour
 
     private bool _aimFlag;
     private bool _sprintFlag;
-
-    private Vector3 _aimTarget = Vector3.zero;
 
     private PositionSolver _positionSolver;
 
@@ -245,36 +242,13 @@ public class ThirdPersonView : MonoBehaviour
         aimOriginOffset.z += _aimOriginZBump;
 
         var eyeTransform = localPlayer.CameraPosition.parent;
-        var aimOriginPos = eyeTransform.TransformPoint(aimOriginOffset);
         var eyeCameraPos = eyeTransform.TransformPoint(_eyeCameraOffset);
-
-        var aimTargetHitMask = _sprintFlag ? _eyeCameraHitMask : _targetHitMask;
-
-        var ray = new Ray(aimOriginPos, eyeTransform.forward);
-        if (Physics.Raycast(ray, out var hitInfo, 5f, aimTargetHitMask))
-        {
-            // _aimTarget = Geometry.ClosestPointOnLine(aimOriginPos, aimOriginPos + eyeTransform.forward * 24.5f, hitInfo.point);
-
-            // Offset the target back by half a meter so that we don't re-hit the same hit point later.
-            _aimTarget = hitInfo.point - 0.5f * eyeTransform.forward;
-        }
-        else
-        {
-            _aimTarget = aimOriginPos + eyeTransform.forward * 4.5f;
-        }
 
         var actualDesiredOffset = _positionSolver.Solve(
             eyeTransform, localPlayer.CameraPosition.localPosition, desiredOffset, eyeCameraPos, _eyeCameraHitMask
         );
 
         localPlayer.CameraPosition.localPosition = actualDesiredOffset;
-
-        // TODO: Tune this
-        var aimVector = _aimTarget - localPlayer.CameraPosition.position;
-        var rotationSpeed = 10 * Mathf.InverseLerp(100f, 900f, aimVector.sqrMagnitude);
-        localPlayer.CameraPosition.rotation = Quaternion.Slerp(
-            localPlayer.CameraPosition.rotation, Quaternion.LookRotation(aimVector), rotationSpeed * Time.deltaTime
-        );
     }
 
     private void UpdatePointOfView(EPointOfView value)
@@ -284,6 +258,9 @@ public class ThirdPersonView : MonoBehaviour
         if (value == EPointOfView.ThirdPerson)
         {
             localPlayer.POM.CameraCollider.enabled = false;
+            
+            // Squash any shenanigans with tilted cameras due to leaning
+            localPlayer.CameraPosition.localRotation = Quaternion.identity;
 
             // Re-enable recoil and hit reactions in third person
             if (localPlayer.HitReaction != null)
@@ -303,7 +280,6 @@ public class ThirdPersonView : MonoBehaviour
 
     private void UpdatePlayerPointOfView(EPointOfView value)
     {
-        localPlayer.PointOfView = value;
         localPlayer.PointOfView = value;
     }
 
@@ -331,7 +307,7 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
+        // CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
 
         // var rect = DebugUI.Label(new Vector2(50, 50), "******************************************", centered: false);
         // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Input Desired: {_positionSolver.DesiredCamOffset} -> {_positionSolver.DesiredCamOffset.magnitude}", centered: false);
@@ -340,12 +316,12 @@ public class ThirdPersonView : MonoBehaviour
         // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Desired: {_positionSolver.Phase2Offset} -> {_positionSolver.Phase2Offset.magnitude}", centered: false);
         // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Damp: {_positionSolver.Phase2CamOffset} -> {_positionSolver.Phase2CamOffset.magnitude}", centered: false);
         // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 3: {_positionSolver.Phase3Offset} -> {_positionSolver.Phase3Offset.magnitude}", centered: false);
+
+        // var rect = DebugUI.Label(new Vector2(50, 50), $"{localPlayer.CameraPosition.rotation} {localPlayer.CameraPosition.localRotation}", centered: false);
+        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $": {_aimVector} -> {_lookVector}", centered: false);
         
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
-
-        var aimScreenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(_aimTarget);
-        DrawCrosshair(aimScreenPosition, 5, Color.red, 2);
 
         if (_firearmController == null)
             return;

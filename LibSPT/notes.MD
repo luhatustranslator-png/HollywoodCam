@@ -14,6 +14,15 @@
 5. We do a smoothdamp to that point
 6. Finally, we do a linecast to the camera position after the smoothdamp and if it's still occluded, we force push it to the unoccluded point
 
+# Optic sight not showing
+PWA.method_1 seems to be enabling/disabling optics
+
+# Aiming
+PWA.applycomplexrotation rotates the player aim, so if we want him to aim where the camera points, this is where to do it
+
+# UI Text not showing
+GamePlayerOwner.MyPlayer.ShowAmmoCountZeroingPanel shows teh zeroing panel, figure out why this is not showing.
+
 ```csharp
 localPlayer.PlayerBones.ShiftWeaponRoot: seems to fuck around with the weapon root? Has a thirdPersonAuthority that seems to adjust
 how much 3rd person fucks with the weapon?

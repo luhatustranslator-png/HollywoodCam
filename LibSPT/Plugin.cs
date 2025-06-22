@@ -95,6 +95,8 @@ public class Plugin : BaseUnityPlugin
         new PlayerShotReactionsPostFixPatch().Enable();
         new PlayerOnLeanPostfixPatch().Enable();
         new PlayerBonesShiftWeaponRootPrefixPatch().Enable();
+        new PlayerBridgePointOfViewPrefixPatch().Enable();
+        new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
         
         if (_loggingEnabled.Value)
         {
