@@ -19,7 +19,7 @@ public class PlayerBridgePointOfViewPrefixPatch : ModulePatch
         if (!__instance.iPlayer.IsYourPlayer)
             return true;
         
-        // Force FP handling in case we are in FP or TP view
+        // Force FP handling for local player to avoid sounds being muffled
         __result = EPointOfView.FirstPerson;
         return false;
     }
