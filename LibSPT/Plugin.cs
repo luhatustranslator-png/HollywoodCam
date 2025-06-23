@@ -98,6 +98,10 @@ public class Plugin : BaseUnityPlugin
         new PlayerBridgePointOfViewPrefixPatch().Enable();
         new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
         
+        new BattleUIPlayerPointOfViewOverridePatch().Enable();
+        new BattleUIOnShowAmmoPrefixPatch().Enable();
+        new BattleUIOnShowFireModePrefixPatch().Enable();
+        
         if (_loggingEnabled.Value)
         {
             Log.LogInfo("Logging enabled");

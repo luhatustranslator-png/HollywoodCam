@@ -93,7 +93,7 @@ public class ThirdPersonView : MonoBehaviour
         // NB: Has to be LateUpdate as doing all this in Update can cause the camera to occasionally clip into the wall when mousing violently.
         HandleInputs();
 
-        if (localPlayer.CameraPosition == null)
+        if (localPlayer.CameraPosition == null || !localPlayer.HealthController.IsAlive)
             return;
 
         _handsController = localPlayer.HandsController as Player.ItemHandsController;
@@ -101,7 +101,8 @@ public class ThirdPersonView : MonoBehaviour
 
         var isAiming = _handsController != null && _handsController.IsAiming;
 
-        if (!_thirdPersonEnabled)
+        // Force to first person when mounting stationary weapons. They tend to glitch out otherwise.
+        if (!_thirdPersonEnabled || localPlayer.MovementContext.StationaryWeapon != null)
         {
             if (localPlayer.PointOfView != EPointOfView.ThirdPerson) return;
 
@@ -300,19 +301,15 @@ public class ThirdPersonView : MonoBehaviour
         var pwa = localPlayer.ProceduralWeaponAnimation;
         var pwaStrat = Traverse.Create(pwa).Field("_strategy").GetValue();
 
-        var rect = DebugUI.Label(new Vector2(50, 50),
-            $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
-            $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}",
-            centered: false);
+        var rect = DebugUI.Label(new Vector2(50, 50), $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
         rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
-            $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
-            $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
+        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
 
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;

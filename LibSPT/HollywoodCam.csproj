@@ -111,6 +111,7 @@
     <Compile Include="Helpers\DebugUI.cs" />
     <Compile Include="Patches\BaseSoundPlayer.cs" />
     <Compile Include="Patches\GameWorld.cs" />
+    <Compile Include="Patches\BattleUI.cs" />
     <Compile Include="Patches\Player.cs" />
     <Compile Include="Patches\PlayerBones.cs" />
     <Compile Include="Patches\ProceduralWeaponAnimation.cs" />
