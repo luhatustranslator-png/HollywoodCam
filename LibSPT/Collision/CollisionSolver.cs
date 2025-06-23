@@ -49,11 +49,11 @@ public class PositionSolver(
     {
         var phase1Offset = ApplySolver(Phase1, eyeTransform, ref currentCameraOffset, desiredCameraOffset, eyePos, eyeMask);
         currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase1Offset, ref _phase1Velocity,
-            phase1SmoothTime * Plugin.CameraChangeTime.Value);
+            phase1SmoothTime / Plugin.CameraMoveSpeed.Value);
 
         var phase2Offset = ApplySolver(Phase2, eyeTransform, ref currentCameraOffset, currentCameraOffset, eyePos, eyeMask);
         currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase2Offset, ref _phase2Velocity,
-            phase2SmoothTime * Plugin.CameraChangeTime.Value);
+            phase2SmoothTime / Plugin.CameraMoveSpeed.Value);
 
         var finalCameraPos = Phase3.Solve(eyeTransform, currentCameraOffset, eyePos, eyeMask);
         return eyeTransform.InverseTransformPoint(finalCameraPos);

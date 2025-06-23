@@ -81,6 +81,9 @@ public class ThirdPersonView : MonoBehaviour
         if (Input.GetKeyDown(Plugin.CameraShoulderKey.Value))
             _cameraPosition = _cameraPosition != CameraPositionEnum.Shoulder ? CameraPositionEnum.Shoulder : Plugin.CameraPositionDefault.Value;
 
+        if (Input.GetKeyDown(Plugin.CameraStanceToggleKey.Value))
+            _cameraStance *= -1;
+        
         if (Input.GetKeyDown(Plugin.CameraStanceLeftKey.Value))
             _cameraStance = -1;
 
@@ -244,9 +247,6 @@ public class ThirdPersonView : MonoBehaviour
         {
             localPlayer.POM.CameraCollider.enabled = false;
 
-            // Squash any shenanigans with tilted cameras due to leaning
-            localPlayer.CameraPosition.localRotation = Quaternion.identity;
-
             // Re-enable recoil and hit reactions in third person
             if (localPlayer.HitReaction != null)
             {
@@ -287,30 +287,25 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
-        // TODO: Add debug printout toggle to the plugin and write this out if toggled on. 
         // CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
+        
+        if (Plugin.DebugUIEnabled.Value)
+        {
+            var pwa = localPlayer.ProceduralWeaponAnimation;
+            var pwaStrat = Traverse.Create(pwa).Field("_strategy").GetValue();
 
-        // var rect = DebugUI.Label(new Vector2(50, 50), "******************************************", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Input Desired: {_positionSolver.DesiredCamOffset} -> {_positionSolver.DesiredCamOffset.magnitude}", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 1 Desired: {_positionSolver.Phase1Offset} -> {_positionSolver.Phase1Offset.magnitude}", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 1 Damp: {_positionSolver.Phase1CamOffset} -> {_positionSolver.Phase1CamOffset.magnitude}", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Desired: {_positionSolver.Phase2Offset} -> {_positionSolver.Phase2Offset.magnitude}", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 2 Damp: {_positionSolver.Phase2CamOffset} -> {_positionSolver.Phase2CamOffset.magnitude}", centered: false);
-        // rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Phase 3: {_positionSolver.Phase3Offset} -> {_positionSolver.Phase3Offset.magnitude}", centered: false);
-
-        var pwa = localPlayer.ProceduralWeaponAnimation;
-        var pwaStrat = Traverse.Create(pwa).Field("_strategy").GetValue();
-
-        var rect = DebugUI.Label(new Vector2(50, 50), $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
-        rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
-
+            // ReSharper disable 
+            var rect = DebugUI.Label(new Vector2(50, 50), $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
+            DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);            
+        }
+        
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
 
