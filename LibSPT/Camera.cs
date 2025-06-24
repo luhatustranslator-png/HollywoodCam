@@ -103,6 +103,26 @@ public class ThirdPersonView : MonoBehaviour
         _firearmController = localPlayer.HandsController as Player.FirearmController;
 
         var isAiming = _handsController != null && _handsController.IsAiming;
+        
+        if (Plugin.CameraStanceSwapOnLeanEnabled.Value)
+        {
+            _cameraStance = localPlayer.MovementContext._tilt switch
+            {
+                < 0 => -1,
+                > 0 => 1,
+                _ => _cameraStance
+            };
+        }
+
+        if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
+        {
+            if (_firearmController != null)
+            {
+                if ((localPlayer.MovementContext.LeftStanceEnabled && _cameraStance > 0f)
+                    || (!localPlayer.MovementContext.LeftStanceEnabled && _cameraStance < 0f))
+                    _firearmController.ChangeLeftStance();
+            }
+        }
 
         // Force to first person when mounting stationary weapons. They tend to glitch out otherwise.
         if (!_thirdPersonEnabled || localPlayer.MovementContext.StationaryWeapon != null)
@@ -179,26 +199,6 @@ public class ThirdPersonView : MonoBehaviour
         if (localPlayer.PointOfView != EPointOfView.ThirdPerson)
         {
             UpdatePointOfView(EPointOfView.ThirdPerson);
-        }
-
-        if (Plugin.CameraStanceSwapOnLeanEnabled.Value)
-        {
-            _cameraStance = localPlayer.MovementContext._tilt switch
-            {
-                < 0 => -1,
-                > 0 => 1,
-                _ => _cameraStance
-            };
-        }
-
-        if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
-        {
-            if (_firearmController != null)
-            {
-                if ((localPlayer.MovementContext.LeftStanceEnabled && _cameraStance > 0f)
-                    || (!localPlayer.MovementContext.LeftStanceEnabled && _cameraStance < 0f))
-                    _firearmController.ChangeLeftStance();
-            }
         }
 
         // The offset vector is passed by value, which means it's safe to modify it here
