@@ -38,7 +38,7 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
         var quaternion1 = Quaternion.Lerp(
             Quaternion.identity,
             __instance.HandsContainer.CameraAnimatedFP.localRotation * __instance.HandsContainer.CameraAnimatedTP.localRotation,
-            10 * __instance.Single_1 * (1f - ____tacticalReload.Value)
+            __instance.Single_1 * (1f - ____tacticalReload.Value)
         );
         var quaternion2 = Quaternion.Euler(__instance.HandsContainer.CameraRotation.Get() + ____headRotationVec);
 
@@ -47,7 +47,9 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
         __instance.method_19(dt);
 
         var curRecoilEffect = __instance.Shootingg.CurrentRecoilEffect;
-        cameraTransform.localEulerAngles += 1.5f * (curRecoilEffect.GetCameraRotationRecoil() + curRecoilEffect.WeaponRecoilEffect.GetCameraRotationRecoil());
+        cameraTransform.localEulerAngles += 1.5f * Plugin.CamShakeScale.Value *
+                                            (curRecoilEffect.GetCameraRotationRecoil() +
+                                             curRecoilEffect.WeaponRecoilEffect.GetCameraRotationRecoil());
 
         return false;
     }

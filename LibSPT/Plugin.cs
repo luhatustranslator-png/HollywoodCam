@@ -78,6 +78,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> SprintFovChangeTime;
     
     public static ConfigEntry<float> FlinchScale;
+    public static ConfigEntry<float> CamShakeScale;
     public static ConfigEntry<float> InteractionRange;
 
     public static ConfigEntry<bool> DebugUIEnabled;
@@ -234,10 +235,15 @@ public class Plugin : BaseUnityPlugin
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
 
-        FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.1f, new ConfigDescription(
+        FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.35f, new ConfigDescription(
             "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you want to larp being a bobble head.",
             new AcceptableValueRange<float>(0f, 5f),
-            tags: new ConfigurationManagerAttributes { Order = 1 }
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        CamShakeScale = Config.Bind(headerMisc, "Camera Recoil Amount", 1f, new ConfigDescription(
+            "Adjusts the amount of camera recoil.",
+            new AcceptableValueRange<float>(0f, 10f),
+            tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
         InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 4f, new ConfigDescription(
             "How far away (in meters) you can interact with objects like doors or adult toy vending machines. This is measured from the camera " +
