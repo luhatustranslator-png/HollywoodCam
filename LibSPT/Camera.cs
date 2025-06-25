@@ -242,6 +242,7 @@ public class ThirdPersonView : MonoBehaviour
         localPlayer.PointOfView = value;
         // We force weapon handling to be first person. This allows optic sight rendering to work correctly (they don't render properly otherwise).
         localPlayer.ProceduralWeaponAnimation.PointOfView = EPointOfView.FirstPerson;
+        localPlayer.ProceduralWeaponAnimation.TurnAway.PointOfView = value;
 
         if (value == EPointOfView.ThirdPerson)
         {
@@ -293,11 +294,13 @@ public class ThirdPersonView : MonoBehaviour
         {
             var pwa = localPlayer.ProceduralWeaponAnimation;
             var pwaStrat = Traverse.Create(pwa).Field("_strategy").GetValue();
+            var leftStanceCurve = Traverse.Create(pwa).Field("_leftStanceCurrentCurveValue").GetValue();
 
             // ReSharper disable 
             var rect = DebugUI.Label(new Vector2(50, 50), $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"LeftStanceCurve: {leftStanceCurve}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);

@@ -16,7 +16,7 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
 
     [PatchPrefix]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public static bool Prefix(ProceduralWeaponAnimation __instance, float dt,
+    public static bool Prefix(ProceduralWeaponAnimation __instance, float dt, Quaternion ____cameraIdenity,
         float ____aimSwayStrength, Player.ValueBlender ____aimSwayBlender, Vector3 ____aimSwayDirection,
         Player.ValueBlenderDelay ____tacticalReload, Vector3 ____headRotationVec, Quaternion ____rotationOffset)
     {
@@ -35,8 +35,9 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
         }
 
         var cameraTransform = __instance.HandsContainer.CameraTransform;
+        
         var quaternion1 = Quaternion.Lerp(
-            Quaternion.identity,
+            ____cameraIdenity,
             __instance.HandsContainer.CameraAnimatedFP.localRotation * __instance.HandsContainer.CameraAnimatedTP.localRotation,
             __instance.Single_1 * (1f - ____tacticalReload.Value)
         );
