@@ -55,3 +55,25 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
         return false;
     }
 }
+
+public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(ProceduralWeaponAnimation).GetMethod(nameof(ProceduralWeaponAnimation.SetStrategy), types: [typeof(GInterface38)]);
+    }
+
+    [PatchPrefix]
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    public static void Prefix(ProceduralWeaponAnimation __instance, ref GInterface38 strategy )
+    {
+        if (StaticData.LocalPlayer == null|| __instance != StaticData.LocalPlayer.ProceduralWeaponAnimation)
+            return;
+
+        if (strategy is GClass889)
+        {
+            // Hijack any attempt at using the shonky builtin 3rd person strategy
+            strategy = StaticData.CustomAnimStrategy;
+        }
+    }
+}

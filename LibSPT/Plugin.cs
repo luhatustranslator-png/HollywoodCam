@@ -44,7 +44,7 @@ public enum AdsModeEnum
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.0.3";
+    public const string HollywoodCamVersion = "1.0.4";
 
     public static ManualLogSource Log;
 
@@ -93,11 +93,13 @@ public class Plugin : BaseUnityPlugin
 
         new GameWorldStartedPostfixPatch().Enable();
         new GameWorldDisposePostfixPatch().Enable();
+        
         new PlayerConstructorPostFixPatch().Enable();
         new PlayerShotReactionsPostFixPatch().Enable();
         new PlayerOnLeanPostfixPatch().Enable();
-        new PlayerBridgePointOfViewPrefixPatch().Enable();
+        new BaseSoundPlayerPointOfViewPrefixPatch().Enable();
         new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
+        new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
         new PlayerVisualPassPatch().Enable();
         
         new PlayerPointOfViewPrefixPatch().Enable();

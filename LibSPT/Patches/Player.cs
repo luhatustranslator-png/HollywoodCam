@@ -48,7 +48,7 @@ public class PlayerVisualPassPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Prefix(Player __instance)
     {
-        if (__instance != StaticData.LocalPlayer)
+        if (__instance != StaticData.LocalPlayer || StaticData.LocalPlayer.ProceduralWeaponAnimation.IsMountedState)
             return;
 
         PlayerPoVFuckery.OverridePoV = true;

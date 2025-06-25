@@ -44,7 +44,6 @@ public class ThirdPersonView : MonoBehaviour
     private Player.FirearmController _firearmController;
 
     private SharedGameSettingsClass _gameSettings;
-    private static readonly CustomAnimStrategy CustomAnimStrategy = new();
 
     public void Awake()
     {
@@ -83,7 +82,7 @@ public class ThirdPersonView : MonoBehaviour
 
         if (Input.GetKeyDown(Plugin.CameraStanceToggleKey.Value))
             _cameraStance *= -1;
-        
+
         if (Input.GetKeyDown(Plugin.CameraStanceLeftKey.Value))
             _cameraStance = -1;
 
@@ -103,7 +102,7 @@ public class ThirdPersonView : MonoBehaviour
         _firearmController = localPlayer.HandsController as Player.FirearmController;
 
         var isAiming = _handsController != null && _handsController.IsAiming;
-        
+
         if (Plugin.CameraStanceSwapOnLeanEnabled.Value)
         {
             _cameraStance = localPlayer.MovementContext._tilt switch
@@ -240,12 +239,14 @@ public class ThirdPersonView : MonoBehaviour
     private void UpdatePointOfView(EPointOfView value)
     {
         localPlayer.PointOfView = value;
-        // We force weapon handling to be first person. This allows optic sight rendering to work correctly (they don't render properly otherwise).
-        localPlayer.ProceduralWeaponAnimation.PointOfView = EPointOfView.FirstPerson;
-        localPlayer.ProceduralWeaponAnimation.TurnAway.PointOfView = value;
 
         if (value == EPointOfView.ThirdPerson)
         {
+            // We force weapon handling to be first person. This allows optic sight rendering to work correctly (they don't render properly otherwise).
+            localPlayer.ProceduralWeaponAnimation.PointOfView = EPointOfView.FirstPerson;
+            // Turnaway must be forced back to 3rd person otherwise the hands misbehave
+            localPlayer.ProceduralWeaponAnimation.TurnAway.PointOfView = value;
+
             localPlayer.POM.CameraCollider.enabled = false;
 
             // Re-enable recoil and hit reactions in third person
@@ -255,12 +256,22 @@ public class ThirdPersonView : MonoBehaviour
             }
 
             // Force our own custom weapon animation strategy that enables proper recoil
-            localPlayer.ProceduralWeaponAnimation.SetStrategy(CustomAnimStrategy);
+            localPlayer.ProceduralWeaponAnimation.SetStrategy(StaticData.CustomAnimStrategy);
         }
         else
         {
             localPlayer.POM.CameraCollider.enabled = true;
             localPlayer.CameraPosition.localPosition = _currentOffset = Vector3.zero;
+
+            // Explicitly set the pwa strategy to mounted in this case, because the game would just set it to the FP strategy and that's incorrect
+            if (value == EPointOfView.FirstPerson)
+            {
+                localPlayer.ProceduralWeaponAnimation.SetStrategy(
+                    localPlayer.ProceduralWeaponAnimation.IsMountedState
+                        ? localPlayer.MovementContext._mountingStrategy
+                        : StaticData.FPAnimStrategy
+                );
+            }
         }
     }
 
@@ -289,7 +300,7 @@ public class ThirdPersonView : MonoBehaviour
     public void OnGUI()
     {
         // CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
-        
+
         if (Plugin.DebugUIEnabled.Value)
         {
             var pwa = localPlayer.ProceduralWeaponAnimation;
@@ -297,18 +308,25 @@ public class ThirdPersonView : MonoBehaviour
             var leftStanceCurve = Traverse.Create(pwa).Field("_leftStanceCurrentCurveValue").GetValue();
 
             // ReSharper disable 
-            var rect = DebugUI.Label(new Vector2(50, 50), $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}", centered: false);
-            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
-            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}", centered: false);
+            var rect = DebugUI.Label(new Vector2(50, 50),
+                $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}",
+                centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+                $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}",
+                centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"LeftStanceCurve: {leftStanceCurve}", centered: false);
-            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}",
+                centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
-            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
-            DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);            
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+                $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
+            DebugUI.Label(new Vector2(50, rect.y + rect.height),
+                $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
         }
-        
+
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)
             return;
 
@@ -318,8 +336,11 @@ public class ThirdPersonView : MonoBehaviour
         if (!_firearmController.IsAiming && Plugin.CrosshairAdsOnlyEnabled.Value)
             return;
 
+        // Only solid/opaque stuff
+        // const int layerMaskVisCheck = 0b0000_00100_0001_0001_1000_0000_0000;
+        const int layerMaskVisCheck = 0b0000_00000_0001_0001_1000_0000_0000;
         var ray = new Ray(_firearmController.CurrentFireport.position, _firearmController.WeaponDirection);
-        if (!Physics.Raycast(ray, out var hitInfo, 100000, GClass3449.HitMask)) return;
+        if (!Physics.Raycast(ray, out var hitInfo, 100000, layerMaskVisCheck)) return;
 
         var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(hitInfo.point);
 

@@ -5,7 +5,7 @@ using SPT.Reflection.Patching;
 
 namespace HollywoodCam.Patches;
 
-public class PlayerBridgePointOfViewPrefixPatch : ModulePatch
+public class BaseSoundPlayerPointOfViewPrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
