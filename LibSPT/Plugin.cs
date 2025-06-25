@@ -216,7 +216,7 @@ public class Plugin : BaseUnityPlugin
             "Show the crosshair only during ADS. It's a bit cheesy otherwise. Buy a laser sight you bum.",
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
-        CrosshairColor = Config.Bind(headerCrosshair, "Crosshair Color", Color.white, new ConfigDescription(
+        CrosshairColor = Config.Bind(headerCrosshair, "Crosshair Color", Color.red, new ConfigDescription(
             "Color of the crosshair.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
