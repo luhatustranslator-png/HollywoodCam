@@ -44,7 +44,7 @@ public enum AdsModeEnum
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.0.2";
+    public const string HollywoodCamVersion = "1.0.3";
 
     public static ManualLogSource Log;
 
@@ -79,6 +79,7 @@ public class Plugin : BaseUnityPlugin
     
     public static ConfigEntry<float> FlinchScale;
     public static ConfigEntry<float> CamShakeScale;
+    public static ConfigEntry<bool> ShimmyEnabled;
     public static ConfigEntry<float> InteractionRange;
 
     public static ConfigEntry<bool> DebugUIEnabled;
@@ -95,13 +96,13 @@ public class Plugin : BaseUnityPlugin
         new PlayerConstructorPostFixPatch().Enable();
         new PlayerShotReactionsPostFixPatch().Enable();
         new PlayerOnLeanPostfixPatch().Enable();
-        new PlayerBonesShiftWeaponRootPrefixPatch().Enable();
         new PlayerBridgePointOfViewPrefixPatch().Enable();
         new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
+        new PlayerVisualPassPatch().Enable();
         
-        new BattleUIPlayerPointOfViewOverridePatch().Enable();
-        new BattleUIOnShowAmmoPrefixPatch().Enable();
-        new BattleUIOnShowFireModePrefixPatch().Enable();
+        new PlayerPointOfViewPrefixPatch().Enable();
+        new BattleUIOnShowAmmoPatch().Enable();
+        new BattleUIOnShowFireModePatch().Enable();
         
         if (_loggingEnabled.Value)
         {
@@ -238,11 +239,15 @@ public class Plugin : BaseUnityPlugin
         FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.35f, new ConfigDescription(
             "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you want to larp being a bobble head.",
             new AcceptableValueRange<float>(0f, 5f),
-            tags: new ConfigurationManagerAttributes { Order = 3 }
+            tags: new ConfigurationManagerAttributes { Order = 4 }
         ));
         CamShakeScale = Config.Bind(headerMisc, "Camera Recoil Amount", 1f, new ConfigDescription(
             "Adjusts the amount of camera recoil.",
             new AcceptableValueRange<float>(0f, 10f),
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        ShimmyEnabled = Config.Bind(headerMisc, "Shimmy When Turning", true, new ConfigDescription(
+            "Toggles the feet shimmying when turning the torso. Enabled by default in Live Tarkov. Purely cosmetic.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
         InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 4f, new ConfigDescription(

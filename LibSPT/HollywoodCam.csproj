@@ -113,7 +113,6 @@
     <Compile Include="Patches\GameWorld.cs" />
     <Compile Include="Patches\BattleUI.cs" />
     <Compile Include="Patches\Player.cs" />
-    <Compile Include="Patches\PlayerBones.cs" />
     <Compile Include="Patches\ProceduralWeaponAnimation.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -23,7 +23,8 @@ public class GameWorldStartedPostfixPatch : ModulePatch
         tpView.localPlayer = __instance.MainPlayer;
         
         // Disables the stupid jitter when rotating on the trunk
-        // __instance.MainPlayer.TrunkRotationLimit = 0f;
+        if (!Plugin.ShimmyEnabled.Value)
+            __instance.MainPlayer.TrunkRotationLimit = 0f;
 
         StaticData.InRaid = true;
         StaticData.LocalPlayer = __instance.MainPlayer;

@@ -5,6 +5,66 @@ using SPT.Reflection.Patching;
 
 namespace HollywoodCam.Patches;
 
+/*
+ * This fvckery doth come as a svrprise.
+ *
+ * It's needed because:
+ * 1. Some deeply nested code that checks that we are in 1st person before showing the ammo counter or fire mode texts.
+ * We temporarily make the game believe the local player is in first person, even if it's not.
+ * 2. Animation logic around PlayerBones and the thirdPersonAuthority variables have to be tricked that they are in first person so that the hand
+ * doesn't go completely haywire during movement and that we can properly do left stance.
+ */
+public static class PlayerPoVFuckery
+{
+    public static bool OverridePoV;
+}
+
+public class PlayerPointOfViewPrefixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(Player).GetProperty(nameof(Player.PointOfView))?.GetGetMethod();
+    }
+
+    [PatchPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static bool Prefix(Player __instance, ref EPointOfView __result)
+    {
+        if (!PlayerPoVFuckery.OverridePoV || __instance != StaticData.LocalPlayer) return true;
+
+        __result = EPointOfView.FirstPerson;
+        return false;
+    }
+}
+
+public class PlayerVisualPassPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(Player).GetMethod(nameof(Player.VisualPass));
+    }
+
+    [PatchPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static void Prefix(Player __instance)
+    {
+        if (__instance != StaticData.LocalPlayer)
+            return;
+
+        PlayerPoVFuckery.OverridePoV = true;
+    }
+
+    [PatchFinalizer]
+    // ReSharper disable once InconsistentNaming
+    public static void Finalizer(Player __instance)
+    {
+        if (__instance != StaticData.LocalPlayer)
+            return;
+
+        PlayerPoVFuckery.OverridePoV = false;
+    }
+}
+
 public class PlayerShotReactionsPostFixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
