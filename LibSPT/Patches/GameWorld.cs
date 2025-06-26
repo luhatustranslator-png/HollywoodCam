@@ -26,7 +26,6 @@ public class GameWorldStartedPostfixPatch : ModulePatch
         if (!Plugin.ShimmyEnabled.Value)
             __instance.MainPlayer.TrunkRotationLimit = 0f;
 
-        StaticData.InRaid = true;
         StaticData.LocalPlayer = __instance.MainPlayer;
     }
 }
@@ -45,7 +44,6 @@ public class GameWorldDisposePostfixPatch : ModulePatch
         Plugin.Log.LogInfo("Disposing of static & long lived objects.");
 
         StaticData.LocalPlayer = null;
-        StaticData.InRaid = false;
 
         Plugin.Log.LogInfo("Disposing complete.");
     }

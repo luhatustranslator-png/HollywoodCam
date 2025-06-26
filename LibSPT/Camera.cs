@@ -269,7 +269,7 @@ public class ThirdPersonView : MonoBehaviour
                 localPlayer.ProceduralWeaponAnimation.SetStrategy(
                     localPlayer.ProceduralWeaponAnimation.IsMountedState
                         ? localPlayer.MovementContext._mountingStrategy
-                        : StaticData.FPAnimStrategy
+                        : StaticData.FpAnimStrategy
                 );
             }
         }
