@@ -100,6 +100,7 @@ public class Plugin : BaseUnityPlugin
         new BaseSoundPlayerPointOfViewPrefixPatch().Enable();
         new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
         new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
+        new TurnAwayEffectorProcessPrefixPatch().Enable();
         new PlayerVisualPassPatch().Enable();
         
         new PlayerPointOfViewPrefixPatch().Enable();

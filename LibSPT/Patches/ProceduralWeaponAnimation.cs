@@ -35,7 +35,7 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
         }
 
         var cameraTransform = __instance.HandsContainer.CameraTransform;
-        
+
         var quaternion1 = Quaternion.Lerp(
             ____cameraIdenity,
             __instance.HandsContainer.CameraAnimatedFP.localRotation * __instance.HandsContainer.CameraAnimatedTP.localRotation,
@@ -65,9 +65,9 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
 
     [PatchPrefix]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public static void Prefix(ProceduralWeaponAnimation __instance, ref GInterface38 strategy )
+    public static void Prefix(ProceduralWeaponAnimation __instance, ref GInterface38 strategy)
     {
-        if (StaticData.LocalPlayer == null|| __instance != StaticData.LocalPlayer.ProceduralWeaponAnimation)
+        if (StaticData.LocalPlayer == null || __instance != StaticData.LocalPlayer.ProceduralWeaponAnimation)
             return;
 
         if (strategy is GClass889)
@@ -75,5 +75,24 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
             // Hijack any attempt at using the shonky builtin 3rd person strategy
             strategy = StaticData.CustomAnimStrategy;
         }
+    }
+}
+
+public class TurnAwayEffectorProcessPrefixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(TurnAwayEffector).GetMethod(nameof(TurnAwayEffector.Process));
+    }
+
+    [PatchPrefix]
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    public static bool Prefix(TurnAwayEffector __instance)
+    {
+        if (StaticData.LocalPlayer == null)
+            return true;
+
+        return __instance != StaticData.LocalPlayer.ProceduralWeaponAnimation.TurnAway ||
+               StaticData.LocalPlayer.PointOfView != EPointOfView.ThirdPerson;
     }
 }
