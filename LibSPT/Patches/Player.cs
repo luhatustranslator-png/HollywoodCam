@@ -53,12 +53,12 @@ public class SlotViewChangedPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(PlayerBody.GClass2119).GetMethod(nameof(PlayerBody.GClass2119.method_4));
+        return typeof(PlayerBody.EquipmentSlotClass).GetMethod(nameof(PlayerBody.EquipmentSlotClass.method_4));
     }
 
     [PatchPostfix]
     // ReSharper disable once InconsistentNaming
-    public static void Postfix(PlayerBody.GClass2119 __instance)
+    public static void Postfix(PlayerBody.EquipmentSlotClass __instance)
     {
         for (var i = 0; i < __instance.Renderers.Length; i++)
         {

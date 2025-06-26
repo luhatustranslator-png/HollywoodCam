@@ -108,7 +108,7 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
         if (localPlayer == null || __instance != localPlayer.ProceduralWeaponAnimation)
             return;
 
-        if (strategy is GClass889)
+        if (strategy is GClass908)
         {
             // Hijack any attempt at using the shonky builtin 3rd person strategy
             strategy = StaticData.CustomAnimStrategy;

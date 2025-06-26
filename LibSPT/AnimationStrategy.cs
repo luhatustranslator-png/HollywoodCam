@@ -12,7 +12,7 @@ namespace HollywoodCam;
 /// </summary>
 public class CustomAnimStrategy : GInterface38
 {
-    private readonly GClass888 _wrapped = new();
+    private readonly GClass909 _wrapped = new();
 
     public void ProcessEffectors(ProceduralWeaponAnimation pwa, float deltaTime, int nFixedFrames = 1)
     {

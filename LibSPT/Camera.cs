@@ -64,7 +64,7 @@ public class ThirdPersonView : MonoBehaviour
         Plugin.AdsModeBasic.SettingChanged += (_, _) => _adsModeBasic = Plugin.AdsModeBasic.Value;
 
         // Hit mask for the camera root. Remove players from this to avoid colliding with ourselves, duh
-        _eyeCameraHitMask = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
+        _eyeCameraHitMask = LayerMasksDataAbstractClass.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
 
         _gameSettings = Singleton<SharedGameSettingsClass>.Instance;
 
@@ -117,7 +117,7 @@ public class ThirdPersonView : MonoBehaviour
 
         if (Plugin.CameraStanceSwapOnLeanEnabled.Value)
         {
-            _cameraStance = localPlayer.MovementContext._tilt switch
+            _cameraStance = localPlayer.MovementContext.Tilt switch
             {
                 < 0 => -1,
                 > 0 => 1,
@@ -139,7 +139,7 @@ public class ThirdPersonView : MonoBehaviour
                 }
                 case GunStanceSyncEnum.Lean when Plugin.GunStanceReset.Value:
                 {
-                    if (localPlayer.MovementContext.LeftStanceEnabled && localPlayer.MovementContext._tilt == 0f)
+                    if (localPlayer.MovementContext.LeftStanceEnabled && localPlayer.MovementContext.Tilt == 0f)
                         _firearmController.ChangeLeftStance();
 
                     break;
@@ -319,7 +319,7 @@ public class ThirdPersonView : MonoBehaviour
             {
                 localPlayer.ProceduralWeaponAnimation.SetStrategy(
                     localPlayer.ProceduralWeaponAnimation.IsMountedState
-                        ? localPlayer.MovementContext._mountingStrategy
+                        ? localPlayer.MovementContext.MountingStrategy
                         : StaticData.FpAnimStrategy
                 );
             }
@@ -390,7 +390,7 @@ public class ThirdPersonView : MonoBehaviour
             var cameraController = localPlayer.gameObject.GetComponent<PlayerCameraController>();
             if (cameraController != null)
             {
-                var pcaStrategy = Traverse.Create(cameraController).Field("gclass3404_0").GetValue<GClass3404>();
+                var pcaStrategy = Traverse.Create(cameraController).Field("gclass3688_0").GetValue<GClass3688>();
                 rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"PCA Strat: {pcaStrategy}", centered: false);
             }
 
