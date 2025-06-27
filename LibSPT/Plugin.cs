@@ -105,7 +105,7 @@ public class Plugin : BaseUnityPlugin
         new BattleUIOnShowAmmoPatch().Enable();
         new BattleUIOnShowFireModePatch().Enable();
         
-        new PlayerInitPostfixPatch().Enable();
+        new GameWorldStartedPostfixPatch().Enable();
         new PlayerDisposePrefixPatch().Enable();
         
         if (_loggingEnabled.Value)

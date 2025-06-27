@@ -138,29 +138,6 @@ public class PlayerOnLeanPostfixPatch : ModulePatch
     }
 }
 
-public class PlayerInitPostfixPatch : ModulePatch
-{
-    protected override MethodBase GetTargetMethod()
-    {
-        return typeof(Player).GetMethod(nameof(Player.Init));
-    }
-
-    [PatchPostfix]
-    // ReSharper disable once InconsistentNaming
-    public static void Postfix(Player __instance)
-    {
-        if (!__instance.IsYourPlayer)
-            return;
-
-        var tpView = __instance.gameObject.AddComponent<ThirdPersonView>();
-        tpView.localPlayer = __instance;
-
-        // Disables the jitter when rotating on the trunk
-        if (!Plugin.ShimmyEnabled.Value)
-            __instance.TrunkRotationLimit = 0f;
-    }
-}
-
 public class PlayerDisposePrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
