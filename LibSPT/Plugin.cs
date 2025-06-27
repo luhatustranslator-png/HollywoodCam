@@ -91,21 +91,21 @@ public class Plugin : BaseUnityPlugin
 
         SetupConfig();
 
-        new GameWorldStartedPostfixPatch().Enable();
-        new GameWorldDisposePostfixPatch().Enable();
-        
-        new PlayerConstructorPostFixPatch().Enable();
-        new PlayerShotReactionsPostFixPatch().Enable();
+        new PlayerPointOfViewPrefixPatch().Enable();
+        new PlayerVisualPassPatch().Enable();
+        new PlayerConstructorPostfixPatch().Enable();
+        new PlayerShotReactionsPostfixPatch().Enable();
         new PlayerOnLeanPostfixPatch().Enable();
         new BaseSoundPlayerPointOfViewPrefixPatch().Enable();
         new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
         new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
         new TurnAwayEffectorProcessPrefixPatch().Enable();
-        new PlayerVisualPassPatch().Enable();
         
-        new PlayerPointOfViewPrefixPatch().Enable();
         new BattleUIOnShowAmmoPatch().Enable();
         new BattleUIOnShowFireModePatch().Enable();
+        
+        new PlayerInitPostfixPatch().Enable();
+        new PlayerDisposePrefixPatch().Enable();
         
         if (_loggingEnabled.Value)
         {

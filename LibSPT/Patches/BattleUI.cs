@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Comfort.Common;
 using EFT;
 using SPT.Reflection.Patching;
 
@@ -17,7 +18,7 @@ public class BattleUIOnShowFireModePatch : ModulePatch
     [PatchPrefix]
     public static void Prefix(Player ___player_0)
     {
-        if (___player_0 != StaticData.LocalPlayer)
+        if (___player_0 != Singleton<GameWorld>.Instance.MainPlayer)
             return;
         
         PlayerPoVFuckery.OverridePoV = true;
@@ -26,7 +27,7 @@ public class BattleUIOnShowFireModePatch : ModulePatch
     [PatchFinalizer]
     public static void Finalizer(Player ___player_0)
     {
-        if (___player_0 != StaticData.LocalPlayer)
+        if (___player_0 != Singleton<GameWorld>.Instance.MainPlayer)
             return;
         
         PlayerPoVFuckery.OverridePoV = false;
@@ -43,7 +44,7 @@ public class BattleUIOnShowAmmoPatch : ModulePatch
     [PatchPrefix]
     public static void Prefix(Player ___player_0)
     {
-        if (___player_0 != StaticData.LocalPlayer)
+        if (___player_0 != Singleton<GameWorld>.Instance.MainPlayer)
             return;
         
         PlayerPoVFuckery.OverridePoV = true;
@@ -52,7 +53,7 @@ public class BattleUIOnShowAmmoPatch : ModulePatch
     [PatchFinalizer]
     public static void Finalizer(Player ___player_0)
     {
-        if (___player_0 != StaticData.LocalPlayer)
+        if (___player_0 != Singleton<GameWorld>.Instance.MainPlayer)
             return;
         
         PlayerPoVFuckery.OverridePoV = false;

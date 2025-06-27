@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using Comfort.Common;
 using EFT;
 using EFT.Animations;
 using SPT.Reflection.Patching;
@@ -20,10 +21,12 @@ public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
         float ____aimSwayStrength, Player.ValueBlender ____aimSwayBlender, Vector3 ____aimSwayDirection,
         Player.ValueBlenderDelay ____tacticalReload, Vector3 ____headRotationVec, Quaternion ____rotationOffset)
     {
-        if (StaticData.LocalPlayer == null)
+        var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
+        
+        if (localPlayer == null)
             return true;
 
-        if (__instance != StaticData.LocalPlayer.ProceduralWeaponAnimation || StaticData.LocalPlayer.PointOfView != EPointOfView.ThirdPerson)
+        if (__instance != localPlayer.ProceduralWeaponAnimation || localPlayer.PointOfView != EPointOfView.ThirdPerson)
             return true;
 
         // This is a copy of the raw LerpCamera, but removes the position logic and only applies the rotation for headbob, recoil, etc...
@@ -67,7 +70,9 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     public static void Prefix(ProceduralWeaponAnimation __instance, ref GInterface38 strategy)
     {
-        if (StaticData.LocalPlayer == null || __instance != StaticData.LocalPlayer.ProceduralWeaponAnimation)
+        var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
+        
+        if (localPlayer == null || __instance != localPlayer.ProceduralWeaponAnimation)
             return;
 
         if (strategy is GClass889)
@@ -89,10 +94,12 @@ public class TurnAwayEffectorProcessPrefixPatch : ModulePatch
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     public static bool Prefix(TurnAwayEffector __instance)
     {
-        if (StaticData.LocalPlayer == null)
+        var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
+        
+        if (localPlayer == null)
             return true;
 
-        return __instance != StaticData.LocalPlayer.ProceduralWeaponAnimation.TurnAway ||
-               StaticData.LocalPlayer.PointOfView != EPointOfView.ThirdPerson;
+        return __instance != localPlayer.ProceduralWeaponAnimation.TurnAway ||
+               localPlayer.PointOfView != EPointOfView.ThirdPerson;
     }
 }

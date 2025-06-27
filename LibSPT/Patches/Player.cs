@@ -1,7 +1,10 @@
-﻿using System.Reflection;
+﻿using System.Net;
+using System.Reflection;
+using Comfort.Common;
 using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
+using UnityEngine;
 
 namespace HollywoodCam.Patches;
 
@@ -30,7 +33,7 @@ public class PlayerPointOfViewPrefixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static bool Prefix(Player __instance, ref EPointOfView __result)
     {
-        if (!PlayerPoVFuckery.OverridePoV || __instance != StaticData.LocalPlayer) return true;
+        if (!PlayerPoVFuckery.OverridePoV || __instance != Singleton<GameWorld>.Instance.MainPlayer) return true;
 
         __result = EPointOfView.FirstPerson;
         return false;
@@ -48,7 +51,9 @@ public class PlayerVisualPassPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Prefix(Player __instance)
     {
-        if (__instance != StaticData.LocalPlayer || StaticData.LocalPlayer.ProceduralWeaponAnimation.IsMountedState)
+        var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
+
+        if (__instance != localPlayer || localPlayer.ProceduralWeaponAnimation.IsMountedState)
             return;
 
         PlayerPoVFuckery.OverridePoV = true;
@@ -58,14 +63,14 @@ public class PlayerVisualPassPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Finalizer(Player __instance)
     {
-        if (__instance != StaticData.LocalPlayer)
+        if (__instance != Singleton<GameWorld>.Instance.MainPlayer)
             return;
 
         PlayerPoVFuckery.OverridePoV = false;
     }
 }
 
-public class PlayerShotReactionsPostFixPatch : ModulePatch
+public class PlayerShotReactionsPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
@@ -92,7 +97,7 @@ public class PlayerShotReactionsPostFixPatch : ModulePatch
     }
 }
 
-public class PlayerConstructorPostFixPatch : ModulePatch
+public class PlayerConstructorPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
@@ -130,5 +135,47 @@ public class PlayerOnLeanPostfixPatch : ModulePatch
 
         if ((__instance.MovementContext.LeftStanceEnabled && dir > 0f) || (!__instance.MovementContext.LeftStanceEnabled && dir < 0f))
             firearmController.ChangeLeftStance();
+    }
+}
+
+public class PlayerInitPostfixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(Player).GetMethod(nameof(Player.Init));
+    }
+
+    [PatchPostfix]
+    // ReSharper disable once InconsistentNaming
+    public static void Postfix(Player __instance)
+    {
+        if (!__instance.IsYourPlayer)
+            return;
+
+        var tpView = __instance.gameObject.AddComponent<ThirdPersonView>();
+        tpView.localPlayer = __instance;
+
+        // Disables the jitter when rotating on the trunk
+        if (!Plugin.ShimmyEnabled.Value)
+            __instance.TrunkRotationLimit = 0f;
+    }
+}
+
+public class PlayerDisposePrefixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(Player).GetMethod(nameof(Player.Dispose));
+    }
+
+    [PatchPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static void Postfix(Player __instance)
+    {
+        if (!__instance.IsYourPlayer)
+            return;
+
+        var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
+        Object.DestroyImmediate(tpView);
     }
 }
