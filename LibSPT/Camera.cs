@@ -38,6 +38,9 @@ public class ThirdPersonView : MonoBehaviour
     private bool _aimFlag;
     private bool _sprintFlag;
 
+    private AdsModeEnum _adsModeOptic;
+    private AdsModeEnum _adsModeBasic;
+
     private PositionSolver _positionSolver;
 
     private Player.ItemHandsController _handsController;
@@ -50,6 +53,12 @@ public class ThirdPersonView : MonoBehaviour
         _thirdPersonEnabled = Plugin.PointOfViewDefault.Value == PointOfViewEnum.ThirdPerson;
         _cameraPosition = Plugin.CameraPositionDefault.Value;
         _cameraStance = (int)Plugin.CameraStanceDefault.Value;
+
+        _adsModeOptic = Plugin.AdsModeOptic.Value;
+        _adsModeBasic = Plugin.AdsModeBasic.Value;
+
+        Plugin.AdsModeOptic.SettingChanged += (_, _) => _adsModeOptic = Plugin.AdsModeOptic.Value;
+        Plugin.AdsModeBasic.SettingChanged += (_, _) => _adsModeBasic = Plugin.AdsModeBasic.Value;
 
         // Hit mask for the camera root. Remove players from this to avoid colliding with ourselves, duh
         _eyeCameraHitMask = GClass3449.HitMask.value & ~(1 << LayerMask.NameToLayer("HitCollider"));
@@ -123,6 +132,16 @@ public class ThirdPersonView : MonoBehaviour
             }
         }
 
+        var currentScopeIsOptic = _firearmController != null && localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic;
+
+        if (Input.GetKeyDown(Plugin.AdsModeSwapKey.Value))
+        {
+            if (currentScopeIsOptic)
+                _adsModeOptic = _adsModeOptic == AdsModeEnum.FirstPerson ? AdsModeEnum.Shoulder : AdsModeEnum.FirstPerson;
+            else
+                _adsModeBasic = _adsModeBasic == AdsModeEnum.FirstPerson ? AdsModeEnum.Shoulder : AdsModeEnum.FirstPerson;
+        }
+
         // Force to first person when mounting stationary weapons. They tend to glitch out otherwise.
         if (!_thirdPersonEnabled || localPlayer.MovementContext.StationaryWeapon != null)
         {
@@ -132,9 +151,9 @@ public class ThirdPersonView : MonoBehaviour
             return;
         }
 
-        var adsModeSelected = _firearmController != null && localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic
-            ? Plugin.AdsModeOptic.Value
-            : Plugin.AdsModeBasic.Value;
+        var adsModeSelected = currentScopeIsOptic
+            ? _adsModeOptic
+            : _adsModeBasic;
 
         switch (adsModeSelected)
         {
@@ -313,6 +332,7 @@ public class ThirdPersonView : MonoBehaviour
                 centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
                 $"IsAiming: {pwa.IsAiming} MoveWeapCloser{pwa._shouldMoveWeaponCloser} IsMounted: {pwa.IsMountedState}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"ADS Mode Optic: {_adsModeOptic} Basic: {_adsModeBasic}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"SmoothTilt: {pwa.SmoothedTilt} PossibleTilt{pwa.PossibleTilt}",
                 centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"LeftStanceCurve: {leftStanceCurve}", centered: false);

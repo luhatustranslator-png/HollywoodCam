@@ -59,6 +59,7 @@ public class Plugin : BaseUnityPlugin
 
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
     public static ConfigEntry<AdsModeEnum> AdsModeBasic;
+    public static ConfigEntry<KeyCode> AdsModeSwapKey;
     public static ConfigEntry<int> AdsBasicFovChange;
     public static ConfigEntry<float> AdsFovChangeTime;
 
@@ -140,10 +141,14 @@ public class Plugin : BaseUnityPlugin
         
         AdsModeOptic = Config.Bind(headerAiming, "Optic Sight ADS Mode", AdsModeEnum.FirstPerson, new ConfigDescription(
             "Determines the ADS logic for magnifying optic sights.",
-            tags: new ConfigurationManagerAttributes { Order = 4 }
+            tags: new ConfigurationManagerAttributes { Order = 5 }
         ));
         AdsModeBasic = Config.Bind(headerAiming, "Basic Sight ADS Mode", AdsModeEnum.Shoulder, new ConfigDescription(
             "Determines the ADS logic for non-optic sights (this is iron, holo, reflex, etc...).",
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
+        AdsModeSwapKey = Config.Bind(headerAiming, "ADS Mode Swap Key", KeyCode.None, new ConfigDescription(
+            "Switches between First Person and Shoulder Cam ADS for the currently equipped weapon.",
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
         AdsBasicFovChange = Config.Bind(headerAiming, "3rd Person ADS FoV Change", -15, new ConfigDescription(
