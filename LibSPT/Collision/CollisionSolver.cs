@@ -2,10 +2,11 @@
 
 namespace HollywoodCam.Collision;
 
-public class AdvectionSolver(CircleScan circleScan, LineScan lineScan)
+public class AdvectionSolver(CircleScan circleScan, LineScan lineScan, float? lineScanRadius = null)
 {
     public readonly CircleScan CircleScan = circleScan;
     public readonly LineScan LineScan = lineScan;
+    public readonly float LineScanRadius = lineScanRadius ?? circleScan.CenterSphereCastRadius;
 
     public Vector3 Solve(
         Transform eyeTransform, Vector3 cameraOffset, Vector3 objectivePos, LayerMask layerMask
@@ -23,7 +24,7 @@ public class AdvectionSolver(CircleScan circleScan, LineScan lineScan)
         var scanOffset = CircleScan.AdvectionVector;
         var scanRadius = CircleScan.SphereCastRadius;
 
-        return LineScan.FindBestPosition(eyeTransform, cameraOffset, scanOffset, objectivePos, scanRadius, layerMask);
+        return LineScan.FindBestPosition(eyeTransform, cameraOffset, scanOffset, objectivePos, LineScanRadius, layerMask);
     }
 }
 
@@ -50,7 +51,7 @@ public class PositionSolver(
         var phase1Offset = ApplySolver(Phase1, eyeTransform, ref currentCameraOffset, desiredCameraOffset, eyePos, eyeMask);
         currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase1Offset, ref _phase1Velocity,
             phase1SmoothTime / Plugin.CameraMoveSpeed.Value);
-
+        
         var phase2Offset = ApplySolver(Phase2, eyeTransform, ref currentCameraOffset, currentCameraOffset, eyePos, eyeMask);
         currentCameraOffset = Vector3.SmoothDamp(currentCameraOffset, phase2Offset, ref _phase2Velocity,
             phase2SmoothTime / Plugin.CameraMoveSpeed.Value);

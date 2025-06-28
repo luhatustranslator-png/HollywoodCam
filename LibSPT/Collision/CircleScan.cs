@@ -13,10 +13,11 @@ public class CircleScan
     public Vector3 AdvectionVector;
 
     public readonly float SphereCastRadius;
+    public readonly float CenterSphereCastRadius;
 
     public readonly float Epsilon;
 
-    public CircleScan(int pointCount, float radius = 1f, float epsilon = 1f)
+    public CircleScan(int pointCount, float radius = 1f, float epsilon = 1f, float? centerRadius = null)
     {
         Points = new Vector3[pointCount];
         Scores = new float[pointCount];
@@ -25,6 +26,7 @@ public class CircleScan
 
         // Derive the distance between two points on the circle as 2*r*Sin(angleRadian/2), the radius of a single spherecast is half of this
         SphereCastRadius = radius * Mathf.Sin(angleStep / 2);
+        CenterSphereCastRadius = centerRadius ?? SphereCastRadius;
 
         for (var i = 0; i < pointCount; i++)
         {
@@ -43,7 +45,7 @@ public class CircleScan
     public void Update(Transform eyeTransform, Vector3 cameraOffset, Vector3 objectivePos, LayerMask layerMask)
     {
         var cameraPos = eyeTransform.TransformPoint(cameraOffset);
-        var result = CollisionUtils.SphereCast(objectivePos, cameraPos, SphereCastRadius, layerMask);
+        var result = CollisionUtils.SphereCast(objectivePos, cameraPos, CenterSphereCastRadius, layerMask);
         CenterScore = result.Score;
         CenterPoint = result.TangentPoint;
         AdvectionVector = Vector3.zero;

@@ -75,8 +75,8 @@ public class ThirdPersonView : MonoBehaviour
                 new LineScan(0.5f, 0.025f)
             ),
             new AdvectionSolver(
-                new CircleScan(8, 0.1f, 2f),
-                new LineScan(0.25f, 0.015f)
+                new CircleScan(8, 0.125f, 2f, centerRadius: 0.05f),
+                new LineScan(0.3f, 0.015f)
             ), 0.2f, 0.05f
         );
     }
@@ -281,6 +281,7 @@ public class ThirdPersonView : MonoBehaviour
 
             // Force our own custom weapon animation strategy that enables proper recoil
             localPlayer.ProceduralWeaponAnimation.SetStrategy(StaticData.CustomAnimStrategy);
+            CameraClass.Instance.Camera.nearClipPlane = 0.005f;
         }
         else
         {
@@ -296,6 +297,8 @@ public class ThirdPersonView : MonoBehaviour
                         : StaticData.FpAnimStrategy
                 );
             }
+            
+            CameraClass.Instance.Camera.nearClipPlane = 0.03f;
         }
     }
 
@@ -346,6 +349,10 @@ public class ThirdPersonView : MonoBehaviour
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Near Clip Plane: {CameraClass.Instance.Camera.nearClipPlane}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+                $"Line Scan Radius P1: {_positionSolver.Phase1.LineScanRadius} P2: {_positionSolver.Phase2.LineScanRadius} P3: {_positionSolver.Phase3.LineScanRadius}",
+                centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
                 $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
             DebugUI.Label(new Vector2(50, rect.y + rect.height),
@@ -367,7 +374,7 @@ public class ThirdPersonView : MonoBehaviour
         var ray = new Ray(_firearmController.CurrentFireport.position, _firearmController.WeaponDirection);
 
         Vector3 targetPoint;
-        
+
         if (Physics.Raycast(ray, out var hitInfo, 10000f, layerMaskVisCheck))
         {
             targetPoint = hitInfo.point;
