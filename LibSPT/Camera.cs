@@ -71,7 +71,7 @@ public class ThirdPersonView : MonoBehaviour
                 new LineScan(1.0f, 0.05f)
             ),
             new AdvectionSolver(
-                new CircleScan(10, 0.25f, 2f),
+                new CircleScan(10, 0.25f, 2f, centerRadius: 0.09f),
                 new LineScan(0.5f, 0.025f)
             ),
             new AdvectionSolver(
