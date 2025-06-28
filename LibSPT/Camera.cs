@@ -360,9 +360,19 @@ public class ThirdPersonView : MonoBehaviour
         // const int layerMaskVisCheck = 0b0000_00100_0001_0001_1000_0000_0000;
         const int layerMaskVisCheck = 0b0000_00000_0001_0001_1000_0000_0000;
         var ray = new Ray(_firearmController.CurrentFireport.position, _firearmController.WeaponDirection);
-        if (!Physics.Raycast(ray, out var hitInfo, 100000, layerMaskVisCheck)) return;
 
-        var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(hitInfo.point);
+        Vector3 targetPoint;
+        
+        if (Physics.Raycast(ray, out var hitInfo, 10000f, layerMaskVisCheck))
+        {
+            targetPoint = hitInfo.point;
+        }
+        else
+        {
+            targetPoint = _firearmController.CurrentFireport.position + 10000f * _firearmController.WeaponDirection;
+        }
+
+        var screenPosition = CameraClass.Instance.Camera.WorldPointToVisibleScreenPoint(targetPoint);
 
         if (screenPosition == Vector2.zero)
             return;

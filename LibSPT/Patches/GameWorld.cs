@@ -15,7 +15,7 @@ public class GameWorldStartedPostfixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Postfix(GameWorld __instance)
     {
-        var tpView = __instance.gameObject.AddComponent<ThirdPersonView>();
+        var tpView = __instance.MainPlayer.gameObject.AddComponent<ThirdPersonView>();
         tpView.localPlayer = __instance.MainPlayer;
 
         // Disables the jitter when rotating on the trunk
