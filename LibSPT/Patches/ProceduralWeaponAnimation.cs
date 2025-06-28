@@ -82,24 +82,3 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
         }
     }
 }
-
-public class TurnAwayEffectorProcessPrefixPatch : ModulePatch
-{
-    protected override MethodBase GetTargetMethod()
-    {
-        return typeof(TurnAwayEffector).GetMethod(nameof(TurnAwayEffector.Process));
-    }
-
-    [PatchPrefix]
-    [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public static bool Prefix(TurnAwayEffector __instance)
-    {
-        var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
-        
-        if (localPlayer == null)
-            return true;
-
-        return __instance != localPlayer.ProceduralWeaponAnimation.TurnAway ||
-               localPlayer.PointOfView != EPointOfView.ThirdPerson;
-    }
-}

@@ -166,6 +166,11 @@ public class ThirdPersonView : MonoBehaviour
                     case true when localPlayer.PointOfView == EPointOfView.ThirdPerson:
                         UpdatePointOfView(EPointOfView.FirstPerson);
                         return;
+                    case false when _aimFlag:
+                        _cameraPosition = Plugin.CameraPositionDefault.Value;
+                        localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
+                        ResetFoV();
+                        break;
                 }
 
                 break;
@@ -179,7 +184,7 @@ public class ThirdPersonView : MonoBehaviour
                         localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 0);
                         ScopeFoV();
                         break;
-                    case false when _aimFlag && _cameraPosition == CameraPositionEnum.Shoulder:
+                    case false when _aimFlag:
                         _cameraPosition = Plugin.CameraPositionDefault.Value;
                         localPlayer.BodyAnimatorCommon.SetLayerWeight(8, 1f);
                         ResetFoV();
