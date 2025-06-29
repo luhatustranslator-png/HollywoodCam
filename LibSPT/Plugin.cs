@@ -60,6 +60,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
     public static ConfigEntry<AdsModeEnum> AdsModeBasic;
     public static ConfigEntry<KeyCode> AdsModeSwapKey;
+    public static ConfigEntry<float> AdsThirdPersonSensitivity;
     public static ConfigEntry<int> AdsBasicFovChange;
     public static ConfigEntry<float> AdsFovChangeTime;
 
@@ -91,22 +92,34 @@ public class Plugin : BaseUnityPlugin
         Log = Logger;
 
         SetupConfig();
-
+        
+        // Lifecycle
+        new GameWorldStartedPostfixPatch().Enable();
+        new PlayerDisposePrefixPatch().Enable();
+        new PlayerOnDeadPrefixPatch().Enable();
+        
+        // UI
+        new BattleUIOnShowAmmoPatch().Enable();
+        new BattleUIOnShowFireModePatch().Enable();
+        
+        // Camera
+        new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
+        new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
+        
+        // Player
         new PlayerPointOfViewPrefixPatch().Enable();
         new PlayerVisualPassPatch().Enable();
         new PlayerConstructorPostfixPatch().Enable();
         new PlayerShotReactionsPostfixPatch().Enable();
+        
+        // Lean
         new PlayerOnLeanPostfixPatch().Enable();
+        
+        // Sound
         new BaseSoundPlayerPointOfViewPrefixPatch().Enable();
-        new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
-        new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
         
-        new BattleUIOnShowAmmoPatch().Enable();
-        new BattleUIOnShowFireModePatch().Enable();
-        
-        new GameWorldStartedPostfixPatch().Enable();
-        new PlayerDisposePrefixPatch().Enable();
-        new PlayerOnDeadPrefixPatch().Enable();
+        // Sensitivity
+        new FirearmControllerUpdateSensitivityPrefixPatchPatch().Enable();
         
         if (_loggingEnabled.Value)
         {
@@ -141,14 +154,19 @@ public class Plugin : BaseUnityPlugin
         
         AdsModeOptic = Config.Bind(headerAiming, "Optic Sight ADS Mode", AdsModeEnum.FirstPerson, new ConfigDescription(
             "Determines the ADS logic for magnifying optic sights.",
-            tags: new ConfigurationManagerAttributes { Order = 5 }
+            tags: new ConfigurationManagerAttributes { Order = 6 }
         ));
         AdsModeBasic = Config.Bind(headerAiming, "Basic Sight ADS Mode", AdsModeEnum.Shoulder, new ConfigDescription(
             "Determines the ADS logic for non-optic sights (this is iron, holo, reflex, etc...).",
-            tags: new ConfigurationManagerAttributes { Order = 4 }
+            tags: new ConfigurationManagerAttributes { Order = 5 }
         ));
         AdsModeSwapKey = Config.Bind(headerAiming, "ADS Mode Swap Key", KeyCode.None, new ConfigDescription(
             "Switches between First Person and Shoulder Cam ADS for the currently equipped weapon.",
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
+        AdsThirdPersonSensitivity = Config.Bind(headerAiming, "ADS 3rd Person Sensitivity", 0.5f, new ConfigDescription(
+            "Sensitivity multiplier for 3rd person ADS. The Live Tarkov default is 0.5.",
+            new AcceptableValueRange<float>(0.1f, 5f),
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
         AdsBasicFovChange = Config.Bind(headerAiming, "3rd Person ADS FoV Change", -15, new ConfigDescription(
@@ -158,7 +176,7 @@ public class Plugin : BaseUnityPlugin
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
         AdsFovChangeTime = Config.Bind(headerAiming, "ADS FoV Change Time", 1f, new ConfigDescription(
-            "The timespan (in seconds) that it takes to adjust the FoV for ADS. The BSG default is 1 second. ",
+            "The timespan (in seconds) that it takes to adjust the FoV for ADS. The BSG default is 1 second.",
             new AcceptableValueRange<float>(0f, 5f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));

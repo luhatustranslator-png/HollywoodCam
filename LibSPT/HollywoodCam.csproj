@@ -109,6 +109,7 @@
     <Compile Include="Helpers\DebugGizmo.cs" />
     <Compile Include="Helpers\DebugUI.cs" />
     <Compile Include="Patches\Leaning.cs" />
+    <Compile Include="Patches\Sensitivity.cs" />
     <Compile Include="Patches\Sound.cs" />
     <Compile Include="Patches\BattleUI.cs" />
     <Compile Include="Patches\Lifecycle.cs" />

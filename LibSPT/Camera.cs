@@ -300,6 +300,9 @@ public class ThirdPersonView : MonoBehaviour
             
             CameraClass.Instance.Camera.nearClipPlane = 0.03f;
         }
+        
+        if (_firearmController == null)
+            _firearmController.UpdateSensitivity();
     }
 
     private void ScopeFoV()
@@ -352,6 +355,8 @@ public class ThirdPersonView : MonoBehaviour
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Aim Sens: {_firearmController.AimingSensitivity} Smooth Sens: {_firearmController.AimingSmoothSensitivity}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Current Scope: {localPlayer.ProceduralWeaponAnimation.CurrentScope}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Near Clip Plane: {CameraClass.Instance.Camera.nearClipPlane}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
                 $"Line Scan Radius P1: {_positionSolver.Phase1.LineScanRadius} P2: {_positionSolver.Phase2.LineScanRadius} P3: {_positionSolver.Phase3.LineScanRadius}",
