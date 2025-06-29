@@ -108,11 +108,12 @@
     <Compile Include="ConfigurationManagerAttributes.cs" />
     <Compile Include="Helpers\DebugGizmo.cs" />
     <Compile Include="Helpers\DebugUI.cs" />
-    <Compile Include="Patches\BaseSoundPlayer.cs" />
+    <Compile Include="Patches\Leaning.cs" />
+    <Compile Include="Patches\Sound.cs" />
     <Compile Include="Patches\BattleUI.cs" />
-    <Compile Include="Patches\GameWorld.cs" />
+    <Compile Include="Patches\Lifecycle.cs" />
     <Compile Include="Patches\Player.cs" />
-    <Compile Include="Patches\ProceduralWeaponAnimation.cs" />
+    <Compile Include="Patches\Camera.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Camera.cs" />
