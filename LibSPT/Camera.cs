@@ -326,6 +326,9 @@ public class ThirdPersonView : MonoBehaviour
 
     public void OnGUI()
     {
+        if (!localPlayer.HealthController.IsAlive)
+            return;
+        
         // CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
 
         if (Plugin.DebugUIEnabled.Value)

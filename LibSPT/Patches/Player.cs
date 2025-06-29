@@ -153,6 +153,41 @@ public class PlayerDisposePrefixPatch : ModulePatch
             return;
 
         var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
+
+        if (tpView == null)
+        {
+            Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView has already been destroyed");
+            return;
+        }
+
         Object.DestroyImmediate(tpView);
+        Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView destroyed successfully");
+    }
+}
+
+public class PlayerOnDeadPrefixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(Player).GetMethod(nameof(Player.OnDead));
+    }
+
+    [PatchPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static void Postfix(Player __instance)
+    {
+        if (!__instance.IsYourPlayer)
+            return;
+
+        var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
+
+        if (tpView == null)
+        {
+            Plugin.Log.LogInfo("Player.OnDead: ThirdPersonView has already been destroyed");
+            return;
+        }
+
+        Object.DestroyImmediate(tpView);
+        Plugin.Log.LogInfo("Player.OnDead: ThirdPersonView destroyed");
     }
 }

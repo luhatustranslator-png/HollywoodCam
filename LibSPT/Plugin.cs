@@ -106,6 +106,7 @@ public class Plugin : BaseUnityPlugin
         
         new GameWorldStartedPostfixPatch().Enable();
         new PlayerDisposePrefixPatch().Enable();
+        new PlayerOnDeadPrefixPatch().Enable();
         
         if (_loggingEnabled.Value)
         {
