@@ -44,7 +44,7 @@ public enum AdsModeEnum
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.0.4";
+    public const string HollywoodCamVersion = "1.0.5";
 
     public static ManualLogSource Log;
 
@@ -79,6 +79,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> SprintFovChange;
     public static ConfigEntry<float> SprintFovChangeTime;
     
+    public static ConfigEntry<float> InteractionRayRadius;
     public static ConfigEntry<float> FlinchScale;
     public static ConfigEntry<bool> ShimmyEnabled;
     public static ConfigEntry<float> InteractionRange;
@@ -122,7 +123,7 @@ public class Plugin : BaseUnityPlugin
         
         // Interaction
         new GameWorldFindInteractablePrefixPatch().Enable();
-        new PlayerInteractionRaycastPostfixPatch().Enable();
+        new PlayerInteractionRayPrefixPatch().Enable();
         
         if (_loggingEnabled.Value)
         {
@@ -265,6 +266,11 @@ public class Plugin : BaseUnityPlugin
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
 
+        InteractionRayRadius = Config.Bind(headerMisc, "Interaction Radius", 0.1f, new ConfigDescription(
+            "The radius of the raycast for picking interactable objects (in meters).",
+            new AcceptableValueRange<float>(0.01f, 0.1f),
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
         FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.35f, new ConfigDescription(
             "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you want to larp being a bobble head.",
             new AcceptableValueRange<float>(0f, 5f),
@@ -274,7 +280,7 @@ public class Plugin : BaseUnityPlugin
             "Toggles the feet shimmying when turning the torso. Enabled by default in Live Tarkov. Purely cosmetic.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 3f, new ConfigDescription(
+        InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 3.5f, new ConfigDescription(
             "How far away (in meters) you can interact with objects like doors or adult toy vending machines. This is measured from the camera " +
             "position, not the player position. If the camera is 2m behind the player, you need at least 3m to get reasonable interaction experience.",
             new AcceptableValueRange<float>(0f, 25f),

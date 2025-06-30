@@ -1,10 +1,12 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using EFT;
 using SPT.Reflection.Patching;
 using UnityEngine;
 
 namespace HollywoodCam.Patches;
 
+[SuppressMessage("ReSharper", "InconsistentNaming")]
 public class GameWorldFindInteractablePrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
@@ -13,32 +15,38 @@ public class GameWorldFindInteractablePrefixPatch : ModulePatch
     }
 
     [PatchPrefix]
-    // ReSharper disable once InconsistentNaming
     public static bool Prefix(Ray ray, out RaycastHit hit, ref GameObject __result)
     {
         var maxDistance = Mathf.Max(
             EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE,
             EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE + EFTHardSettings.Instance.BEHIND_CAST
         );
-        var gameObject = EFTPhysicsClass.SphereCast(ray, 0.25f, out hit, maxDistance, GameWorld.InteractiveLootMaskWPlayer) ? hit.collider.gameObject : null;
+        var gameObject =
+            EFTPhysicsClass.SphereCast(ray, Plugin.InteractionRayRadius.Value, out hit, maxDistance, GameWorld.InteractiveLootMaskWPlayer)
+                ? hit.collider.gameObject
+                : null;
         __result = gameObject != null && !Physics.Linecast(ray.origin, hit.point, GameWorld.LootMaskObstruction) ? gameObject : null;
-        
+
         return false;
     }
 }
 
-public class PlayerInteractionRaycastPostfixPatch : ModulePatch
+[SuppressMessage("ReSharper", "InconsistentNaming")]
+public class PlayerInteractionRayPrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(Player).GetMethod(nameof(Player.InteractionRaycast));
+        return typeof(Player).GetProperty(nameof(Player.InteractionRay))?.GetGetMethod();
     }
 
-    [PatchPostfix]
-    // ReSharper disable once InconsistentNaming
-    public static void Prefix(Player __instance, Transform ____playerLookRaycastTransform)
+    [PatchPrefix]
+    public static bool Prefix(Player __instance, ref Ray __result)
     {
-        Plugin.Log.LogInfo($"POV: {__instance.PointOfView} WPos: {____playerLookRaycastTransform.position} LPos: {____playerLookRaycastTransform.localPosition} Rot: {____playerLookRaycastTransform.rotation}");
-        // Plugin.Log.LogInfo($"WPos: {CameraClass.Instance.Camera.transform.position} LPos: {CameraClass.Instance.Camera.transform.localPosition}");
+        if (!__instance.IsYourPlayer || CameraClass.Instance == null || __instance.PlayerBody.PointOfView != EPointOfView.ThirdPerson)
+            return true;
+
+        var cameraTransform = CameraClass.Instance.Camera.transform;
+        __result = new Ray(cameraTransform.position, cameraTransform.forward);
+        return false;
     }
 }
