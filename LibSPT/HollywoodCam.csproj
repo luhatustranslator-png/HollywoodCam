@@ -108,6 +108,7 @@
     <Compile Include="ConfigurationManagerAttributes.cs" />
     <Compile Include="Helpers\DebugGizmo.cs" />
     <Compile Include="Helpers\DebugUI.cs" />
+    <Compile Include="Patches\Interaction.cs" />
     <Compile Include="Patches\Leaning.cs" />
     <Compile Include="Patches\Sensitivity.cs" />
     <Compile Include="Patches\Sound.cs" />

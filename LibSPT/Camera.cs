@@ -1,5 +1,6 @@
 ﻿using Comfort.Common;
 using EFT;
+using EFT.CameraControl;
 using HarmonyLib;
 using HollywoodCam.Collision;
 using HollywoodCam.Helpers;
@@ -99,7 +100,7 @@ public class ThirdPersonView : MonoBehaviour
             _cameraStance = 1;
     }
 
-    public void LateUpdate()
+    public void UpdateCamera()
     {
         // NB: Has to be LateUpdate as doing all this in Update can cause the camera to occasionally clip into the wall when mousing violently.
         HandleInputs();
@@ -245,16 +246,11 @@ public class ThirdPersonView : MonoBehaviour
 
         _sprintFlag = localPlayer.IsSprintEnabled;
 
-        HandleCollision(desiredCameraOffset);
-    }
-
-    private void HandleCollision(Vector3 desiredOffset)
-    {
         var eyeTransform = localPlayer.CameraPosition.parent;
         var eyeCameraPos = eyeTransform.TransformPoint(_eyeCameraOffset);
 
         _currentOffset = _positionSolver.Solve(
-            eyeTransform, _currentOffset, desiredOffset, eyeCameraPos, _eyeCameraHitMask
+            eyeTransform, _currentOffset, desiredCameraOffset, eyeCameraPos, _eyeCameraHitMask
         );
 
         localPlayer.CameraPosition.localPosition = _currentOffset;
@@ -286,7 +282,8 @@ public class ThirdPersonView : MonoBehaviour
         else
         {
             localPlayer.POM.CameraCollider.enabled = true;
-            localPlayer.CameraPosition.localPosition = _currentOffset = Vector3.zero;
+            // Reset the offset back to the BSG default
+            localPlayer.CameraPosition.localPosition = _currentOffset = localPlayer.ProceduralWeaponAnimation.HandsContainer.CameraOffset;
 
             // Explicitly set the pwa strategy to mounted in this case, because the game would just set it to the FP strategy and that's incorrect
             if (value == EPointOfView.FirstPerson)
@@ -297,10 +294,10 @@ public class ThirdPersonView : MonoBehaviour
                         : StaticData.FpAnimStrategy
                 );
             }
-            
+
             CameraClass.Instance.Camera.nearClipPlane = 0.03f;
         }
-        
+
         if (_firearmController == null)
             _firearmController.UpdateSensitivity();
     }
@@ -331,7 +328,7 @@ public class ThirdPersonView : MonoBehaviour
     {
         if (!localPlayer.HealthController.IsAlive)
             return;
-        
+
         // CollisionDebug.DrawCollisionInfo(_positionSolver.Phase1.CircleScan);
 
         if (Plugin.DebugUIEnabled.Value)
@@ -352,22 +349,35 @@ public class ThirdPersonView : MonoBehaviour
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"LeftStanceCurve: {leftStanceCurve}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}",
                 centered: false);
-            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Offset: {_currentOffset}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+                $"InteractionRay Pos: {localPlayer.InteractionRay.origin} Dir: {localPlayer.InteractionRay.direction}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
+            var cameraController = localPlayer.gameObject.GetComponent<PlayerCameraController>();
+            if (cameraController != null)
+            {
+                var pcaStrategy = Traverse.Create(cameraController).Field("gclass3404_0").GetValue<GClass3404>();
+                rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"PCA Strat: {pcaStrategy}", centered: false);
+            }
+
             if (_firearmController != null)
             {
-                rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Aim Sens: {_firearmController.AimingSensitivity} Smooth Sens: {_firearmController.AimingSmoothSensitivity}", centered: false);
-                rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Current Scope: {localPlayer.ProceduralWeaponAnimation.CurrentScope}", centered: false);
+                rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
+                    $"Aim Sens: {_firearmController.AimingSensitivity} Smooth Sens: {_firearmController.AimingSmoothSensitivity}", centered: false);
+                rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Current Scope: {pwa.CurrentScope}", centered: false);
             }
-            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Near Clip Plane: {CameraClass.Instance.Camera.nearClipPlane}", centered: false);
+
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Near Clip Plane: {CameraClass.Instance.Camera.nearClipPlane}",
+                centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
                 $"Line Scan Radius P1: {_positionSolver.Phase1.LineScanRadius} P2: {_positionSolver.Phase2.LineScanRadius} P3: {_positionSolver.Phase3.LineScanRadius}",
                 centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Offset: {_currentOffset} PWA Offset: {pwa.HandsContainer.CameraOffset}",
+                centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
-                $"Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
+                $"Cam Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
             DebugUI.Label(new Vector2(50, rect.y + rect.height),
-                $"Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
+                $"Cam Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);
         }
 
         if (!Plugin.CrosshairEnabled.Value || localPlayer.PointOfView == EPointOfView.FirstPerson)

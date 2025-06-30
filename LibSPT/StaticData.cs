@@ -1,6 +1,4 @@
-﻿using EFT;
-
-namespace HollywoodCam;
+﻿namespace HollywoodCam;
 
 public static class StaticData
 {

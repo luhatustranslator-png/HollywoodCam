@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Comfort.Common;
 using EFT;
 using SPT.Reflection.Patching;
 using UnityEngine;
@@ -16,7 +17,7 @@ public class GameWorldStartedPostfixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Postfix(GameWorld __instance)
     {
-        var tpView = __instance.MainPlayer.gameObject.AddComponent<ThirdPersonView>();
+        var tpView = Singleton<ThirdPersonView>.Instance = __instance.MainPlayer.gameObject.AddComponent<ThirdPersonView>();
         tpView.localPlayer = __instance.MainPlayer;
 
         // Disables the jitter when rotating on the trunk
@@ -49,6 +50,7 @@ public class PlayerDisposePrefixPatch : ModulePatch
             return;
         }
 
+        Singleton<ThirdPersonView>.Release(tpView);
         Object.DestroyImmediate(tpView);
         Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView destroyed successfully");
     }
@@ -76,6 +78,7 @@ public class PlayerOnDeadPrefixPatch : ModulePatch
             return;
         }
 
+        Singleton<ThirdPersonView>.Release(tpView);
         Object.DestroyImmediate(tpView);
         Plugin.Log.LogInfo("Player.OnDead: ThirdPersonView destroyed");
     }

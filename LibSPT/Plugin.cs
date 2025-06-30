@@ -80,7 +80,6 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> SprintFovChangeTime;
     
     public static ConfigEntry<float> FlinchScale;
-    public static ConfigEntry<float> CamShakeScale;
     public static ConfigEntry<bool> ShimmyEnabled;
     public static ConfigEntry<float> InteractionRange;
 
@@ -103,12 +102,12 @@ public class Plugin : BaseUnityPlugin
         new BattleUIOnShowFireModePatch().Enable();
         
         // Camera
-        new ProceduralWeaponAnimationLerpCameraPrefixPatch().Enable();
+        new PlayerPointOfViewPrefixPatch().Enable();
+        new PlayerVisualPassPatch().Enable();
+        new PlayerCameraControllerLateUpdatePrefixPatch().Enable();
         new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
         
         // Player
-        new PlayerPointOfViewPrefixPatch().Enable();
-        new PlayerVisualPassPatch().Enable();
         new PlayerConstructorPostfixPatch().Enable();
         new PlayerShotReactionsPostfixPatch().Enable();
         
@@ -120,6 +119,10 @@ public class Plugin : BaseUnityPlugin
         
         // Sensitivity
         new FirearmControllerUpdateSensitivityPrefixPatchPatch().Enable();
+        
+        // Interaction
+        new GameWorldFindInteractablePrefixPatch().Enable();
+        new PlayerInteractionRaycastPostfixPatch().Enable();
         
         if (_loggingEnabled.Value)
         {
@@ -164,8 +167,8 @@ public class Plugin : BaseUnityPlugin
             "Switches between First Person and Shoulder Cam ADS for the currently equipped weapon.",
             tags: new ConfigurationManagerAttributes { Order = 4 }
         ));
-        AdsThirdPersonSensitivity = Config.Bind(headerAiming, "ADS 3rd Person Sensitivity", 0.5f, new ConfigDescription(
-            "Sensitivity multiplier for 3rd person ADS. The Live Tarkov default is 0.5.",
+        AdsThirdPersonSensitivity = Config.Bind(headerAiming, "ADS 3rd Person Sensitivity", 0.75f, new ConfigDescription(
+            "Sensitivity multiplier for 3rd person ADS. The Live Tarkov default is 0.75.",
             new AcceptableValueRange<float>(0.1f, 5f),
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
@@ -265,18 +268,13 @@ public class Plugin : BaseUnityPlugin
         FlinchScale = Config.Bind(headerMisc, "Flinch Amount", 0.35f, new ConfigDescription(
             "How much flinch is applied when shot. A small value goes a long way. Set to 5 if you want to larp being a bobble head.",
             new AcceptableValueRange<float>(0f, 5f),
-            tags: new ConfigurationManagerAttributes { Order = 4 }
-        ));
-        CamShakeScale = Config.Bind(headerMisc, "Camera Recoil Amount", 1f, new ConfigDescription(
-            "Adjusts the amount of camera recoil.",
-            new AcceptableValueRange<float>(0f, 10f),
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
         ShimmyEnabled = Config.Bind(headerMisc, "Shimmy When Turning", true, new ConfigDescription(
             "Toggles the feet shimmying when turning the torso. Enabled by default in Live Tarkov. Purely cosmetic.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 4f, new ConfigDescription(
+        InteractionRange = Config.Bind(headerMisc, "3rd Person Interaction Range (RESTART)", 3f, new ConfigDescription(
             "How far away (in meters) you can interact with objects like doors or adult toy vending machines. This is measured from the camera " +
             "position, not the player position. If the camera is 2m behind the player, you need at least 3m to get reasonable interaction experience.",
             new AcceptableValueRange<float>(0f, 25f),

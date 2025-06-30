@@ -3,59 +3,92 @@ using System.Reflection;
 using Comfort.Common;
 using EFT;
 using EFT.Animations;
+using EFT.CameraControl;
 using SPT.Reflection.Patching;
-using UnityEngine;
 
 namespace HollywoodCam.Patches;
 
-public class ProceduralWeaponAnimationLerpCameraPrefixPatch : ModulePatch
+/*
+ * This fvckery doth come as a svrprise.
+ *
+ * It's needed because:
+ * 1. Some deeply nested code that checks that we are in 1st person before showing the ammo counter or fire mode texts.
+ * We temporarily make the game believe the local player is in first person, even if it's not.
+ * 2. Animation logic around PlayerBones and the thirdPersonAuthority variables have to be tricked that they are in first person so that the hand
+ * doesn't go completely haywire during movement and that we can properly do left stance.
+ */
+
+public static class PlayerPoVFuckery
+{
+    public static bool OverridePoV;
+}
+
+public class PlayerPointOfViewPrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(ProceduralWeaponAnimation).GetMethod(nameof(ProceduralWeaponAnimation.LerpCamera));
+        return typeof(Player).GetProperty(nameof(Player.PointOfView))?.GetGetMethod();
     }
 
     [PatchPrefix]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public static bool Prefix(ProceduralWeaponAnimation __instance, float dt, Quaternion ____cameraIdenity,
-        float ____aimSwayStrength, Player.ValueBlender ____aimSwayBlender, Vector3 ____aimSwayDirection,
-        Player.ValueBlenderDelay ____tacticalReload, Vector3 ____headRotationVec, Quaternion ____rotationOffset)
+    public static bool Prefix(Player __instance, ref EPointOfView __result)
+    {
+        if (!PlayerPoVFuckery.OverridePoV || __instance != Singleton<GameWorld>.Instance.MainPlayer) return true;
+
+        __result = EPointOfView.FirstPerson;
+        return false;
+    }
+}
+
+public class PlayerVisualPassPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(Player).GetMethod(nameof(Player.VisualPass));
+    }
+
+    [PatchPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static void Prefix(Player __instance)
     {
         var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
+
+        if (__instance != localPlayer || localPlayer.ProceduralWeaponAnimation.IsMountedState)
+            return;
+
+        PlayerPoVFuckery.OverridePoV = true;
+    }
+
+    [PatchFinalizer]
+    // ReSharper disable once InconsistentNaming
+    public static void Finalizer(Player __instance)
+    {
+        if (__instance != Singleton<GameWorld>.Instance.MainPlayer)
+            return;
+
+        PlayerPoVFuckery.OverridePoV = false;
+    }
+}
+
+public class PlayerCameraControllerLateUpdatePrefixPatch : ModulePatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return typeof(PlayerCameraController).GetMethod(nameof(PlayerCameraController.LateUpdate));
+    }
+
+    [PatchPrefix]
+    // ReSharper disable once InconsistentNaming
+    public static void Prefix(PlayerCameraController __instance)
+    {
+        var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
+        var tpvInstance = Singleton<ThirdPersonView>.Instance;
         
-        if (localPlayer == null)
-            return true;
-
-        if (__instance != localPlayer.ProceduralWeaponAnimation || localPlayer.PointOfView != EPointOfView.ThirdPerson)
-            return true;
-
-        // This is a copy of the raw LerpCamera, but removes the position logic and only applies the rotation for headbob, recoil, etc...
-        if (____aimSwayStrength > 0.0f)
-        {
-            var num2 = ____aimSwayBlender.Value;
-            if (__instance.IsAiming && num2 > 0.0f)
-                __instance.HandsContainer.SwaySpring.ApplyVelocity(____aimSwayDirection * num2);
-        }
-
-        var cameraTransform = __instance.HandsContainer.CameraTransform;
-
-        var quaternion1 = Quaternion.Lerp(
-            ____cameraIdenity,
-            __instance.HandsContainer.CameraAnimatedFP.localRotation * __instance.HandsContainer.CameraAnimatedTP.localRotation,
-            __instance.Single_1 * (1f - ____tacticalReload.Value)
-        );
-        var quaternion2 = Quaternion.Euler(__instance.HandsContainer.CameraRotation.Get() + ____headRotationVec);
-
-        cameraTransform.localRotation = quaternion1 * quaternion2 * ____rotationOffset;
-
-        __instance.method_19(dt);
-
-        var curRecoilEffect = __instance.Shootingg.CurrentRecoilEffect;
-        cameraTransform.localEulerAngles += 1.5f * Plugin.CamShakeScale.Value *
-                                            (curRecoilEffect.GetCameraRotationRecoil() +
-                                             curRecoilEffect.WeaponRecoilEffect.GetCameraRotationRecoil());
-
-        return false;
+        if(__instance.Player != localPlayer || tpvInstance == null)
+            return;
+        
+        tpvInstance.UpdateCamera();
     }
 }
 
@@ -71,7 +104,7 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
     public static void Prefix(ProceduralWeaponAnimation __instance, ref GInterface38 strategy)
     {
         var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
-        
+
         if (localPlayer == null || __instance != localPlayer.ProceduralWeaponAnimation)
             return;
 
