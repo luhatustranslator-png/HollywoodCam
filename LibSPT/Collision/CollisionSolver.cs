@@ -22,7 +22,6 @@ public class AdvectionSolver(CircleScan circleScan, LineScan lineScan, float? li
 
         // var scanDir = CircleScan.AdvectionVector.normalized;
         var scanOffset = CircleScan.AdvectionVector;
-        var scanRadius = CircleScan.SphereCastRadius;
 
         return LineScan.FindBestPosition(eyeTransform, cameraOffset, scanOffset, objectivePos, LineScanRadius, layerMask);
     }
