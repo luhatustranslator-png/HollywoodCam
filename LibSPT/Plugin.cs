@@ -306,5 +306,8 @@ public class Plugin : BaseUnityPlugin
             "Duh. Requires restarting the game to take effect.",
         tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
+
+        // Note: this is the overlap threshold where ADSing is prevented. Default is 0.
+        EFTHardSettings.Instance.STOP_AIMING_AT = 100f;
     }
 }
