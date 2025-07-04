@@ -269,15 +269,15 @@ public class ThirdPersonView : MonoBehaviour
 
             localPlayer.POM.CameraCollider.enabled = false;
 
+            // Force our own custom weapon animation strategy that enables proper recoil
+            localPlayer.ProceduralWeaponAnimation.SetStrategy(StaticData.CustomAnimStrategy);
+            CameraClass.Instance.Camera.nearClipPlane = 0.005f;
+            
             // Re-enable recoil and hit reactions in third person
             if (localPlayer.HitReaction != null)
             {
                 localPlayer.HitReaction.enabled = true;
             }
-
-            // Force our own custom weapon animation strategy that enables proper recoil
-            localPlayer.ProceduralWeaponAnimation.SetStrategy(StaticData.CustomAnimStrategy);
-            CameraClass.Instance.Camera.nearClipPlane = 0.005f;
         }
         else
         {
@@ -337,6 +337,11 @@ public class ThirdPersonView : MonoBehaviour
             var pwaStrat = Traverse.Create(pwa).Field("_strategy").GetValue();
             var leftStanceCurve = Traverse.Create(pwa).Field("_leftStanceCurrentCurveValue").GetValue();
 
+            var hitReactionsEnabled = false;
+            
+            if (localPlayer.HitReaction != null)
+                hitReactionsEnabled = localPlayer.HitReaction.enabled;
+            
             // ReSharper disable 
             var rect = DebugUI.Label(new Vector2(50, 50),
                 $"PL POV: {localPlayer.PointOfView} TP Enabled: {_thirdPersonEnabled} PWA POV: {pwa.PointOfView} PWA Strat: {pwaStrat}",
@@ -351,6 +356,7 @@ public class ThirdPersonView : MonoBehaviour
                 centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height),
                 $"InteractionRay Pos: {localPlayer.InteractionRay.origin} Dir: {localPlayer.InteractionRay.direction}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Hit Reactions: {hitReactionsEnabled}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
             var cameraController = localPlayer.gameObject.GetComponent<PlayerCameraController>();
