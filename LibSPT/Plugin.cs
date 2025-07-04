@@ -44,7 +44,7 @@ public enum AdsModeEnum
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.0.5";
+    public const string HollywoodCamVersion = "1.0.6";
 
     public static ManualLogSource Log;
 
