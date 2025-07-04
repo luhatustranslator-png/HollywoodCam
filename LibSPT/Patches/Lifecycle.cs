@@ -19,6 +19,9 @@ public class GameWorldStartedPostfixPatch : ModulePatch
     {
         var tpView = Singleton<ThirdPersonView>.Instance = __instance.MainPlayer.gameObject.AddComponent<ThirdPersonView>();
         tpView.localPlayer = __instance.MainPlayer;
+        
+        var grenadeArc = __instance.MainPlayer.gameObject.AddComponent<GrenadeArc>();
+        grenadeArc.localPlayer = __instance.MainPlayer;
 
         // Disables the jitter when rotating on the trunk
         if (!Plugin.ShimmyEnabled.Value)
@@ -43,16 +46,18 @@ public class PlayerDisposePrefixPatch : ModulePatch
             return;
 
         var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
-
-        if (tpView == null)
+        if (tpView != null)
         {
-            Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView has already been destroyed");
-            return;
+            Singleton<ThirdPersonView>.Release(tpView);
+            Object.DestroyImmediate(tpView);
+            Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView destroyed successfully");
         }
 
-        Singleton<ThirdPersonView>.Release(tpView);
-        Object.DestroyImmediate(tpView);
-        Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView destroyed successfully");
+        var grenadeArc = __instance.gameObject.GetComponent<GrenadeArc>();
+        if (grenadeArc == null) return;
+        
+        Object.DestroyImmediate(grenadeArc);
+        Plugin.Log.LogInfo("Player.Dispose: GrenadeArc destroyed successfully");
     }
 }
 
@@ -71,15 +76,17 @@ public class PlayerOnDeadPrefixPatch : ModulePatch
             return;
 
         var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
-
-        if (tpView == null)
+        if (tpView != null)
         {
-            Plugin.Log.LogInfo("Player.OnDead: ThirdPersonView has already been destroyed");
-            return;
+            Singleton<ThirdPersonView>.Release(tpView);
+            Object.DestroyImmediate(tpView);
+            Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView destroyed successfully");
         }
 
-        Singleton<ThirdPersonView>.Release(tpView);
-        Object.DestroyImmediate(tpView);
-        Plugin.Log.LogInfo("Player.OnDead: ThirdPersonView destroyed");
+        var grenadeArc = __instance.gameObject.GetComponent<GrenadeArc>();
+        if (grenadeArc == null) return;
+        
+        Object.DestroyImmediate(grenadeArc);
+        Plugin.Log.LogInfo("Player.Dispose: GrenadeArc destroyed successfully");
     }
 }

@@ -125,6 +125,9 @@ public class Plugin : BaseUnityPlugin
         new GameWorldFindInteractablePrefixPatch().Enable();
         new PlayerInteractionRayPrefixPatch().Enable();
         
+        new TestPatch1().Enable();
+        new TestPatch2().Enable();
+        
         if (_loggingEnabled.Value)
         {
             Log.LogInfo("Logging enabled");
