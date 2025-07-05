@@ -78,11 +78,15 @@ public class Plugin : BaseUnityPlugin
 
     public static ConfigEntry<int> SprintFovChange;
     public static ConfigEntry<float> SprintFovChangeTime;
-    
+
     public static ConfigEntry<float> InteractionRayRadius;
     public static ConfigEntry<float> FlinchScale;
     public static ConfigEntry<bool> ShimmyEnabled;
     public static ConfigEntry<float> InteractionRange;
+    
+    public static ConfigEntry<bool> GrenadeArcEnabled;
+    public static ConfigEntry<float> GrenadeArcDistance;
+    public static ConfigEntry<float> GrenadeArcResolution;
 
     public static ConfigEntry<bool> DebugUIEnabled;
     private static ConfigEntry<bool> _loggingEnabled;
@@ -92,42 +96,47 @@ public class Plugin : BaseUnityPlugin
         Log = Logger;
 
         SetupConfig();
-        
+
         // Lifecycle
         new GameWorldStartedPostfixPatch().Enable();
         new PlayerDisposePrefixPatch().Enable();
         new PlayerOnDeadPrefixPatch().Enable();
-        
+
         // UI
         new BattleUIOnShowAmmoPatch().Enable();
         new BattleUIOnShowFireModePatch().Enable();
-        
+
         // Camera
         new PlayerPointOfViewPrefixPatch().Enable();
         new PlayerVisualPassPatch().Enable();
         new PlayerCameraControllerLateUpdatePrefixPatch().Enable();
         new ProceduralWeaponAnimationSetStrategyPrefixPatch().Enable();
-        
+
         // Player
         new PlayerConstructorPostfixPatch().Enable();
         new PlayerShotReactionsPostfixPatch().Enable();
-        
+
         // Lean
         new PlayerOnLeanPostfixPatch().Enable();
-        
+
         // Sound
         new BaseSoundPlayerPointOfViewPrefixPatch().Enable();
-        
+
         // Sensitivity
         new FirearmControllerUpdateSensitivityPrefixPatchPatch().Enable();
-        
+
         // Interaction
         new GameWorldFindInteractablePrefixPatch().Enable();
         new PlayerInteractionRayPrefixPatch().Enable();
-        
-        new TestPatch1().Enable();
-        new TestPatch2().Enable();
-        
+
+        // new TestPatch1().Enable();
+        // new TestPatch2().Enable();
+        // new TestPatch3().Enable();
+        // new TestPatch4().Enable();
+        // new TestPatch5().Enable();
+        // new TestPatch6().Enable();
+        // new TestPatch7().Enable();
+
         if (_loggingEnabled.Value)
         {
             Log.LogInfo("Logging enabled");
@@ -148,7 +157,8 @@ public class Plugin : BaseUnityPlugin
         const string headerCrosshair = "5. Crosshair";
         const string headerSprint = "6. Sprint Camera";
         const string headerMisc = "7. Misc Flotsam";
-        const string headerDebug = "8. Debug";
+        const string headerAssist = "8. Assist";
+        const string headerDebug = "9. Debug";
 
         PointOfViewDefault = Config.Bind(headerPerspective, "Default PoV", PointOfViewEnum.ThirdPerson, new ConfigDescription(
             "The default PoV to use at the start of the raid.",
@@ -158,7 +168,7 @@ public class Plugin : BaseUnityPlugin
             "Set the key that will toggle between first and third person view.",
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-        
+
         AdsModeOptic = Config.Bind(headerAiming, "Optic Sight ADS Mode", AdsModeEnum.FirstPerson, new ConfigDescription(
             "Determines the ADS logic for magnifying optic sights.",
             tags: new ConfigurationManagerAttributes { Order = 6 }
@@ -187,7 +197,7 @@ public class Plugin : BaseUnityPlugin
             new AcceptableValueRange<float>(0f, 5f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-        
+
         CameraStanceDefault = Config.Bind(headerStance, "Default Camera Stance", CameraStanceEnum.Right, new ConfigDescription(
             "The default camera stance at the start of the raid. Note, the game might adjust the precise position on multiple factors like " +
             "visibility, ADS, etc.",
@@ -238,7 +248,7 @@ public class Plugin : BaseUnityPlugin
             new AcceptableValueRange<float>(0f, 3f),
             tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-        
+
         CrosshairEnabled = Config.Bind(headerCrosshair, "Enable Crosshair", true, new ConfigDescription(
             "Toggles the world space crosshair in third person view.",
             tags: new ConfigurationManagerAttributes { Order = 4 }
@@ -295,22 +305,36 @@ public class Plugin : BaseUnityPlugin
             EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = InteractionRange.Value;
             EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = InteractionRange.Value;
         };
-        
+
         EFTHardSettings.Instance.LOOT_RAYCAST_DISTANCE = InteractionRange.Value;
         EFTHardSettings.Instance.DOOR_RAYCAST_DISTANCE = InteractionRange.Value;
         EFTHardSettings.Instance.PLAYER_RAYCAST_DISTANCE = InteractionRange.Value;
+
+        // Note: this is the overlap threshold where ADSing is prevented. Default is 0.
+        EFTHardSettings.Instance.STOP_AIMING_AT = 100f;
+
+        GrenadeArcEnabled = Config.Bind(headerAssist, "Enable Grenade Assist", true, new ConfigDescription(
+            "Toggles a visual grenade assist - mostly for helping with 3rd person aiming.",
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        GrenadeArcDistance = Config.Bind(headerAssist, "Max Grenade Assist Distance", 25f, new ConfigDescription(
+            "How far to draw the grenade assist arc.",
+            new AcceptableValueRange<float>(1f, 30f),
+            tags: new ConfigurationManagerAttributes { Order = 2 }
+        ));
+        GrenadeArcResolution = Config.Bind(headerAssist, "Max Grenade Assist Resolution", 0.5f, new ConfigDescription(
+            "Step size when calculating the grenade arc. Too small values take exponentially more time to compute and too large values become inaccurate.",
+            new AcceptableValueRange<float>(0.1f, 2f),
+            tags: new ConfigurationManagerAttributes { Order = 1, IsAdvanced = true}
+        ));
 
         DebugUIEnabled = Config.Bind(headerDebug, "Enable Debug UI", false, new ConfigDescription(
             "Enables the debug UI for diagnosing common issues.",
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
-        
         _loggingEnabled = Config.Bind(headerDebug, "Enable Debug Logging", false, new ConfigDescription(
             "Duh. Requires restarting the game to take effect.",
-        tags: new ConfigurationManagerAttributes { Order = 1 }
+            tags: new ConfigurationManagerAttributes { Order = 1 }
         ));
-
-        // Note: this is the overlap threshold where ADSing is prevented. Default is 0.
-        EFTHardSettings.Instance.STOP_AIMING_AT = 100f;
     }
 }
