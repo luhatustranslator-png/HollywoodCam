@@ -106,7 +106,8 @@
     <Compile Include="Collision\CollisionSolver.cs" />
     <Compile Include="Collision\Utils.cs" />
     <Compile Include="ConfigurationManagerAttributes.cs" />
-    <Compile Include="GrenadeArc.cs" />
+    <Compile Include="GrenadeAssist\GrenadeArc.cs" />
+    <Compile Include="GrenadeAssist\Patches.cs" />
     <Compile Include="Helpers\DebugGizmo.cs" />
     <Compile Include="Helpers\DebugUI.cs" />
     <Compile Include="Patches\Interaction.cs" />

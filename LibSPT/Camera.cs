@@ -226,11 +226,15 @@ public class ThirdPersonView : MonoBehaviour
         }
 
         // The offset vector is passed by value, which means it's safe to modify it here
-        var desiredCameraOffset = _cameraPosition switch
+        var desiredCameraOffset = (_handsController is Player.GrenadeHandsController) switch
         {
-            CameraPositionEnum.Main => Plugin.CameraMainOffset.Value,
-            CameraPositionEnum.Shoulder => Plugin.CameraShoulderOffset.Value,
-            _ => Plugin.CameraMainOffset.Value
+            true => Plugin.CameraGrenadeOffset.Value,
+            false => _cameraPosition switch
+            {
+                CameraPositionEnum.Main => Plugin.CameraMainOffset.Value,
+                CameraPositionEnum.Shoulder => Plugin.CameraShoulderOffset.Value,
+                _ => Plugin.CameraMainOffset.Value
+            }
         };
         desiredCameraOffset.x *= _cameraStance;
 
@@ -372,6 +376,7 @@ public class ThirdPersonView : MonoBehaviour
 
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Near Clip Plane: {CameraClass.Instance.Camera.nearClipPlane}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Line Scan Radius P1: {_positionSolver.Phase1.LineScanRadius} P2: {_positionSolver.Phase2.LineScanRadius} P3: {_positionSolver.Phase3.LineScanRadius}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Player Velocity: {localPlayer.Velocity} Motion: {localPlayer.Motion} Rot: {localPlayer.MovementContext.Rotation}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Offset: {_currentOffset} PWA Offset: {pwa.HandsContainer.CameraOffset}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Pos: {localPlayer.CameraPosition.position} Local: {localPlayer.CameraPosition.localPosition}", centered: false);
             DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Cam Rot: {localPlayer.CameraPosition.rotation} Local: {localPlayer.CameraPosition.localRotation}", centered: false);

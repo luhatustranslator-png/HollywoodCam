@@ -2,6 +2,7 @@
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using HollywoodCam.GrenadeAssist;
 using HollywoodCam.Patches;
 using UnityEngine;
 
@@ -44,7 +45,7 @@ public enum AdsModeEnum
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.0.6";
+    public const string HollywoodCamVersion = "1.1.0";
 
     public static ManualLogSource Log;
 
@@ -54,6 +55,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<CameraPositionEnum> CameraPositionDefault;
     public static ConfigEntry<Vector3> CameraMainOffset;
     public static ConfigEntry<Vector3> CameraShoulderOffset;
+    public static ConfigEntry<Vector3> CameraGrenadeOffset;
     public static ConfigEntry<KeyCode> CameraShoulderKey;
     public static ConfigEntry<float> CameraMoveSpeed;
 
@@ -86,6 +88,10 @@ public class Plugin : BaseUnityPlugin
     
     public static ConfigEntry<bool> GrenadeArcEnabled;
     public static ConfigEntry<float> GrenadeArcDistance;
+    public static ConfigEntry<Color> GrenadeArcStartColor;
+    public static ConfigEntry<Color> GrenadeArcEndColor;
+    public static ConfigEntry<Color> GrenadeArcKnobColor;
+    public static ConfigEntry<float> GrenadeArcKnobSize;
     public static ConfigEntry<float> GrenadeArcResolution;
 
     public static ConfigEntry<bool> DebugUIEnabled;
@@ -129,13 +135,11 @@ public class Plugin : BaseUnityPlugin
         new GameWorldFindInteractablePrefixPatch().Enable();
         new PlayerInteractionRayPrefixPatch().Enable();
 
-        // new TestPatch1().Enable();
-        // new TestPatch2().Enable();
-        // new TestPatch3().Enable();
-        // new TestPatch4().Enable();
-        // new TestPatch5().Enable();
-        // new TestPatch6().Enable();
-        // new TestPatch7().Enable();
+        // Grenade
+        new GrenadeSetThrowForcePrefixPatch().Enable();
+        new GrenadeAssistGameWorldStartedPostfixPatch().Enable();
+        new GrenadeAssistPlayerDisposePrefixPatch().Enable();
+        new GrenadeAssistPlayerOnDeadPrefixPatch().Enable();
 
         if (_loggingEnabled.Value)
         {
@@ -228,13 +232,17 @@ public class Plugin : BaseUnityPlugin
         CameraPositionDefault = Config.Bind(headerCamera, "Default Camera Position", CameraPositionEnum.Main, new ConfigDescription(
             "Determines the default camera position at the start of the raid, note that the game will dynamically adjust the actual position " +
             "based on multiple factors like visibility, ADS, etc.",
-            tags: new ConfigurationManagerAttributes { Order = 5 }
+            tags: new ConfigurationManagerAttributes { Order = 6 }
         ));
         CameraMainOffset = Config.Bind(headerCamera, "Main Cam Offset", new Vector3(0.5f, 0.15f, -1.5f), new ConfigDescription(
             "The default camera position offset relative to the first person view (in meters).",
-            tags: new ConfigurationManagerAttributes { Order = 4 }
+            tags: new ConfigurationManagerAttributes { Order = 5 }
         ));
         CameraShoulderOffset = Config.Bind(headerCamera, "Shoulder Cam Offset", new Vector3(0.5f, 0.05f, -0.5f), new ConfigDescription(
+            "The shoulder camera position offset relative to the first person view (in meters).",
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
+        CameraGrenadeOffset = Config.Bind(headerCamera, "Grenade Cam Offset", new Vector3(0.5f, 0.2f, -0.5f), new ConfigDescription(
             "The shoulder camera position offset relative to the first person view (in meters).",
             tags: new ConfigurationManagerAttributes { Order = 3 }
         ));
@@ -315,11 +323,28 @@ public class Plugin : BaseUnityPlugin
 
         GrenadeArcEnabled = Config.Bind(headerAssist, "Enable Grenade Assist", true, new ConfigDescription(
             "Toggles a visual grenade assist - mostly for helping with 3rd person aiming.",
-            tags: new ConfigurationManagerAttributes { Order = 3 }
+            tags: new ConfigurationManagerAttributes { Order = 7 }
         ));
         GrenadeArcDistance = Config.Bind(headerAssist, "Max Grenade Assist Distance", 25f, new ConfigDescription(
             "How far to draw the grenade assist arc.",
-            new AcceptableValueRange<float>(1f, 30f),
+            new AcceptableValueRange<float>(1f, 50f),
+            tags: new ConfigurationManagerAttributes { Order = 6 }
+        ));
+        GrenadeArcStartColor = Config.Bind(headerAssist, "Grenade Arc Start Color", new Color(0, 1, 0, 0f), new ConfigDescription(
+            "Color of the start of the grenade arc. Make sure to configure the alpha value correctly so that you get a nice fade.",
+            tags: new ConfigurationManagerAttributes { Order = 5 }
+        ));
+        GrenadeArcEndColor = Config.Bind(headerAssist, "Grenade Arc End Color", new Color(1, 0, 0, 0.75f), new ConfigDescription(
+            "Color of the end of the grenade arc. Make sure to configure the alpha value correctly so that you get a nice fade.",
+            tags: new ConfigurationManagerAttributes { Order = 4 }
+        ));
+        GrenadeArcKnobColor = Config.Bind(headerAssist, "Grenade Arc Knob Color", new Color(1, 0, 0, 0.75f), new ConfigDescription(
+            "The uh, color of the knob. At the end of the big curved thing. Knob.",
+            tags: new ConfigurationManagerAttributes { Order = 3 }
+        ));
+        GrenadeArcKnobSize = Config.Bind(headerAssist, "Grenade Arc Knob Size", 0.2f, new ConfigDescription(
+            "Giggity.",
+            new AcceptableValueRange<float>(0.01f, 1f),
             tags: new ConfigurationManagerAttributes { Order = 2 }
         ));
         GrenadeArcResolution = Config.Bind(headerAssist, "Max Grenade Assist Resolution", 0.5f, new ConfigDescription(
