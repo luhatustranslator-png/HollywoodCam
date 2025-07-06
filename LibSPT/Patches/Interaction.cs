@@ -42,7 +42,7 @@ public class PlayerInteractionRayPrefixPatch : ModulePatch
     [PatchPrefix]
     public static bool Prefix(Player __instance, ref Ray __result)
     {
-        if (!__instance.IsYourPlayer || CameraClass.Instance == null || __instance.PlayerBody.PointOfView != EPointOfView.ThirdPerson)
+        if (!__instance.IsYourPlayer || CameraClass.Instance == null || CameraClass.Instance.Camera == null || __instance.PlayerBody.PointOfView != EPointOfView.ThirdPerson)
             return true;
 
         var cameraTransform = CameraClass.Instance.Camera.transform;
