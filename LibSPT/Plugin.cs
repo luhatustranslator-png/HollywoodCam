@@ -146,8 +146,7 @@ public class Plugin : BaseUnityPlugin
         const string headerCrosshair = "5. Crosshair";
         const string headerSprint = "6. Sprint Camera";
         const string headerMisc = "7. Misc Flotsam";
-        const string headerAssist = "8. Assist";
-        const string headerDebug = "9. Debug";
+        const string headerDebug = "8. Debug";
 
         PointOfViewDefault = Config.Bind(headerPerspective, "Default PoV", PointOfViewEnum.ThirdPerson, new ConfigDescription(
             "The default PoV to use at the start of the raid.",
