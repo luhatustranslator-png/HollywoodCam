@@ -112,6 +112,7 @@ public class Plugin : BaseUnityPlugin
         // Player
         new PlayerConstructorPostfixPatch().Enable();
         new PlayerShotReactionsPostfixPatch().Enable();
+        new SlotViewChangedPostfixPatch().Enable();
 
         // Lean
         new PlayerOnLeanPostfixPatch().Enable();
