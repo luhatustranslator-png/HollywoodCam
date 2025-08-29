@@ -39,7 +39,7 @@ public enum AdsModeEnum
     None
 }
 
-[BepInPlugin("com.janky.hollywoodcam", "Janky's Lights, Camera, Hodor", HollywoodCamVersion)]
+[BepInPlugin("com.janky.hollywoodcam", "Janky's Hollywood Camera", HollywoodCamVersion)]
 [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
