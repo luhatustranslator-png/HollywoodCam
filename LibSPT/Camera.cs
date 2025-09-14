@@ -41,6 +41,7 @@ public class ThirdPersonView : MonoBehaviour
 
     private AdsModeEnum _adsModeOptic;
     private AdsModeEnum _adsModeBasic;
+    private bool _currentScopeIsOptic;
 
     private PositionSolver _positionSolver;
 
@@ -133,11 +134,20 @@ public class ThirdPersonView : MonoBehaviour
             }
         }
 
-        var currentScopeIsOptic = _firearmController != null && localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic;
+        var newScopeIsOptic = _firearmController != null && localPlayer.ProceduralWeaponAnimation.CurrentScope.IsOptic;
+
+        // Reset the ADS mode variables in case the memory is switched off
+        if (!Plugin.AdsModeRememberEnabled.Value && newScopeIsOptic != _currentScopeIsOptic && localPlayer.PointOfView == EPointOfView.ThirdPerson)
+        {
+            _adsModeBasic = Plugin.AdsModeBasic.Value;
+            _adsModeOptic = Plugin.AdsModeOptic.Value;
+        }
+        
+        _currentScopeIsOptic = newScopeIsOptic;
 
         if (Input.GetKeyDown(Plugin.AdsModeSwapKey.Value))
         {
-            if (currentScopeIsOptic)
+            if (_currentScopeIsOptic)
                 _adsModeOptic = _adsModeOptic == AdsModeEnum.FirstPerson ? AdsModeEnum.Shoulder : AdsModeEnum.FirstPerson;
             else
                 _adsModeBasic = _adsModeBasic == AdsModeEnum.FirstPerson ? AdsModeEnum.Shoulder : AdsModeEnum.FirstPerson;
@@ -152,7 +162,7 @@ public class ThirdPersonView : MonoBehaviour
             return;
         }
 
-        var adsModeSelected = currentScopeIsOptic
+        var adsModeSelected = _currentScopeIsOptic
             ? _adsModeOptic
             : _adsModeBasic;
 
@@ -302,7 +312,7 @@ public class ThirdPersonView : MonoBehaviour
             CameraClass.Instance.Camera.nearClipPlane = 0.03f;
         }
 
-        if (_firearmController == null)
+        if (_firearmController != null)
             _firearmController.UpdateSensitivity();
     }
 

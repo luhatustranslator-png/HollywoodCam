@@ -60,6 +60,7 @@ public class Plugin : BaseUnityPlugin
 
     public static ConfigEntry<AdsModeEnum> AdsModeOptic;
     public static ConfigEntry<AdsModeEnum> AdsModeBasic;
+    public static ConfigEntry<bool> AdsModeRememberEnabled;
     public static ConfigEntry<KeyCode> AdsModeSwapKey;
     public static ConfigEntry<float> AdsThirdPersonSensitivity;
     public static ConfigEntry<int> AdsBasicFovChange;
@@ -160,10 +161,15 @@ public class Plugin : BaseUnityPlugin
 
         AdsModeOptic = Config.Bind(headerAiming, "Optic Sight ADS Mode", AdsModeEnum.FirstPerson, new ConfigDescription(
             "Determines the ADS logic for magnifying optic sights.",
-            tags: new ConfigurationManagerAttributes { Order = 6 }
+            tags: new ConfigurationManagerAttributes { Order = 7 }
         ));
         AdsModeBasic = Config.Bind(headerAiming, "Basic Sight ADS Mode", AdsModeEnum.Shoulder, new ConfigDescription(
             "Determines the ADS logic for non-optic sights (this is iron, holo, reflex, etc...).",
+            tags: new ConfigurationManagerAttributes { Order = 6 }
+        ));
+        AdsModeRememberEnabled = Config.Bind(headerAiming, "Remember ADS Mode", true, new ConfigDescription(
+            "Toggles whether the ADS mode selected is remembered when using the ADS Mode Swap Key. Turn this off if you want ADS mode to always" +
+            "revert to what is configured here.",
             tags: new ConfigurationManagerAttributes { Order = 5 }
         ));
         AdsModeSwapKey = Config.Bind(headerAiming, "ADS Mode Swap Key", KeyCode.None, new ConfigDescription(
