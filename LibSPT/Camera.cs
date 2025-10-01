@@ -1,4 +1,5 @@
-﻿using Comfort.Common;
+﻿using System;
+using Comfort.Common;
 using EFT;
 using EFT.CameraControl;
 using HarmonyLib;
@@ -124,13 +125,27 @@ public class ThirdPersonView : MonoBehaviour
             };
         }
 
-        if (Plugin.GunStanceSync.Value == GunStanceSyncEnum.Cam)
+        if (_firearmController != null)
         {
-            if (_firearmController != null)
+            switch (Plugin.GunStanceSync.Value)
             {
-                if ((localPlayer.MovementContext.LeftStanceEnabled && _cameraStance > 0f)
-                    || (!localPlayer.MovementContext.LeftStanceEnabled && _cameraStance < 0f))
-                    _firearmController.ChangeLeftStance();
+                case GunStanceSyncEnum.Cam:
+                {
+                    if ((localPlayer.MovementContext.LeftStanceEnabled && _cameraStance > 0f)
+                        || (!localPlayer.MovementContext.LeftStanceEnabled && _cameraStance < 0f))
+                        _firearmController.ChangeLeftStance();
+
+                    break;
+                }
+                case GunStanceSyncEnum.Lean when Plugin.GunStanceReset.Value:
+                {
+                    if (localPlayer.MovementContext.LeftStanceEnabled && localPlayer.MovementContext._tilt == 0f)
+                        _firearmController.ChangeLeftStance();
+
+                    break;
+                }
+                case GunStanceSyncEnum.None:
+                    break;
             }
         }
 
@@ -142,7 +157,7 @@ public class ThirdPersonView : MonoBehaviour
             _adsModeBasic = Plugin.AdsModeBasic.Value;
             _adsModeOptic = Plugin.AdsModeOptic.Value;
         }
-        
+
         _currentScopeIsOptic = newScopeIsOptic;
 
         if (Input.GetKeyDown(Plugin.AdsModeSwapKey.Value))
@@ -369,6 +384,7 @@ public class ThirdPersonView : MonoBehaviour
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"StationaryWpn{localPlayer.MovementContext.StationaryWeapon}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"InteractionRay Pos: {localPlayer.InteractionRay.origin} Dir: {localPlayer.InteractionRay.direction}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Hit Reactions: {hitReactionsEnabled}", centered: false);
+            rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"Environs: {localPlayer.Environment} roof: {localPlayer.IsUnderRoof}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"HandCtr: {_handsController}", centered: false);
             rect = DebugUI.Label(new Vector2(50, rect.y + rect.height), $"FACtr: {_firearmController}", centered: false);
             var cameraController = localPlayer.gameObject.GetComponent<PlayerCameraController>();

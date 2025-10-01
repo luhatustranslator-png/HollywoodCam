@@ -44,7 +44,7 @@ public enum AdsModeEnum
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.1.5";
+    public const string HollywoodCamVersion = "1.1.6";
 
     public static ManualLogSource Log;
 
@@ -77,6 +77,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<KeyCode> CameraStanceRightKey;
     public static ConfigEntry<bool> CameraStanceSwapOnLeanEnabled;
     public static ConfigEntry<GunStanceSyncEnum> GunStanceSync;
+    public static ConfigEntry<bool> GunStanceReset;
 
     public static ConfigEntry<int> SprintFovChange;
     public static ConfigEntry<float> SprintFovChangeTime;
@@ -218,6 +219,10 @@ public class Plugin : BaseUnityPlugin
         GunStanceSync = Config.Bind(headerStance, "Gun Stance Sync", GunStanceSyncEnum.Cam, new ConfigDescription(
             "Automatically shoulder swaps the gun (left or right shoulder) based on either the Camera Stance, Lean direction or nothing.",
             tags: new ConfigurationManagerAttributes { Order = 1 }
+        ));
+        GunStanceReset = Config.Bind(headerStance, "Gun Stance Reset", true, new ConfigDescription(
+            "Reset the gun stance when not leaning.",
+            tags: new ConfigurationManagerAttributes { Order = 0 }
         ));
 
         CameraPositionDefault = Config.Bind(headerCamera, "Default Camera Position", CameraPositionEnum.Main, new ConfigDescription(
