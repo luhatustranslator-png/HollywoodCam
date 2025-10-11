@@ -39,12 +39,12 @@ public enum AdsModeEnum
     None
 }
 
-[BepInPlugin("com.janky.hollywoodcam", "Janky's Hollywood Camera", HollywoodCamVersion)]
+[BepInPlugin("com.janky.hollywoodcam", "Janky-HollywoodCam", HollywoodCamVersion)]
 [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class Plugin : BaseUnityPlugin
 {
-    public const string HollywoodCamVersion = "1.1.7";
+    public const string HollywoodCamVersion = "1.2.0";
 
     public static ManualLogSource Log;
 
