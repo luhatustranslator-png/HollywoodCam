@@ -20,6 +20,9 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
+    - name: Restore NuGet Packages
+      run: dotnet restore
+
     - name: Build Solution
       run: msbuild /p:Configuration=Release /p:GenerateAssemblyInfo=false
 
