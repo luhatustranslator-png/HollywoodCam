@@ -3,10 +3,17 @@
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>HollywoodCam</AssemblyName>
-    <Description>HollywoodCam Third Person Mod for SPT</Description>
+    <Description>HollywoodCam Third Person Mod for SPT 4.1.5</Description>
     <Version>1.2.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>false</Deterministic>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
+    <PackageReference Include="Kube.SPT.Core.Libs" Version="3.10.0" />
+  </ItemGroup>
 
 </Project>
