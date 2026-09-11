@@ -17,6 +17,9 @@ public class GameWorldStartedPostfixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Postfix(GameWorld __instance)
     {
+        if (__instance == null || __instance.MainPlayer == null)
+            return;
+
         var tpView = Singleton<ThirdPersonView>.Instance = __instance.MainPlayer.gameObject.AddComponent<ThirdPersonView>();
         tpView.localPlayer = __instance.MainPlayer;
         
@@ -39,7 +42,7 @@ public class PlayerDisposePrefixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Postfix(Player __instance)
     {
-        if (!__instance.IsYourPlayer)
+        if (__instance == null || !__instance.IsYourPlayer)
             return;
 
         var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
@@ -62,7 +65,7 @@ public class PlayerOnDeadPrefixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Postfix(Player __instance)
     {
-        if (!__instance.IsYourPlayer)
+        if (__instance == null || !__instance.IsYourPlayer)
             return;
 
         var tpView = __instance.gameObject.GetComponent<ThirdPersonView>();
@@ -70,6 +73,6 @@ public class PlayerOnDeadPrefixPatch : ModulePatch
         
         Singleton<ThirdPersonView>.Release(tpView);
         Object.DestroyImmediate(tpView);
-        Plugin.Log.LogInfo("Player.Dispose: ThirdPersonView destroyed successfully");
+        Plugin.Log.LogInfo("Player.OnDead: ThirdPersonView destroyed successfully");
     }
 }

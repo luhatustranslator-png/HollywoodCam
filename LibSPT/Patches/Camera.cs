@@ -1,9 +1,12 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 using Comfort.Common;
 using EFT;
 using EFT.Animations;
 using EFT.CameraControl;
+using HarmonyLib;
 using SPT.Reflection.Patching;
 
 namespace HollywoodCam.Patches;
@@ -54,7 +57,7 @@ public class PlayerVisualPassPatch : ModulePatch
     {
         var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
 
-        if (__instance != localPlayer || localPlayer.ProceduralWeaponAnimation.IsMountedState)
+        if (localPlayer == null || __instance != localPlayer || localPlayer.ProceduralWeaponAnimation.IsMountedState)
             return;
 
         PlayerPoVFuckery.OverridePoV = true;
@@ -85,7 +88,7 @@ public class PlayerCameraControllerLateUpdatePrefixPatch : ModulePatch
         var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
         var tpvInstance = Singleton<ThirdPersonView>.Instance;
         
-        if(__instance.Player != localPlayer || tpvInstance == null)
+        if(localPlayer == null || __instance.Player != localPlayer || tpvInstance == null)
             return;
         
         tpvInstance.UpdateCamera();
@@ -96,22 +99,29 @@ public class ProceduralWeaponAnimationSetStrategyPrefixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(ProceduralWeaponAnimation).GetMethod(nameof(ProceduralWeaponAnimation.SetStrategy), types: [typeof(GInterface38)]);
+        // Encontra dinamicamente o método SetStrategy no ProceduralWeaponAnimation sem depender de nomes GInterface
+        return typeof(ProceduralWeaponAnimation)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(m => m.Name == "SetStrategy" && m.GetParameters().Length == 1);
     }
 
     [PatchPrefix]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public static void Prefix(ProceduralWeaponAnimation __instance, ref GInterface38 strategy)
+    public static void Prefix(ProceduralWeaponAnimation __instance, ref object strategy)
     {
         var localPlayer = Singleton<GameWorld>.Instance.MainPlayer;
 
-        if (localPlayer == null || __instance != localPlayer.ProceduralWeaponAnimation)
+        if (localPlayer == null || __instance != localPlayer.ProceduralWeaponAnimation || strategy == null)
             return;
 
-        if (strategy is GClass908)
+        // Se a estratégia atual for de terceira pessoa nativa do jogo, substitui pela CustomAnimStrategy
+        string typeName = strategy.GetType().Name;
+        if (typeName.Contains("ThirdPerson") || typeName.Contains("GClass908") || !typeName.Contains("FirstPerson"))
         {
-            // Hijack any attempt at using the shonky builtin 3rd person strategy
-            strategy = StaticData.CustomAnimStrategy;
+            if (StaticData.CustomAnimStrategy != null)
+            {
+                strategy = StaticData.CustomAnimStrategy;
+            }
         }
     }
 }

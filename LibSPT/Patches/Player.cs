@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using EFT;
 using HarmonyLib;
 using SPT.Reflection.Patching;
@@ -16,18 +17,24 @@ public class PlayerShotReactionsPostfixPatch : ModulePatch
     // ReSharper disable once InconsistentNaming
     public static void Postfix(Player __instance)
     {
-        if (!__instance.IsYourPlayer)
+        if (__instance == null || !__instance.IsYourPlayer || __instance.HitReaction == null)
             return;
 
-        // We just loop through here and manually molest the HitPoint.force for each hitpoint in the recoil list. This should allow us to rotate & amplify the force
-        foreach (var hitPoint in __instance.HitReaction.boneHitPoints)
+        // Multiplica a força das reações de tiro nos pontos de impacto do corpo
+        if (__instance.HitReaction.boneHitPoints != null)
         {
-            hitPoint.force *= Plugin.FlinchScale.Value;
+            foreach (var hitPoint in __instance.HitReaction.boneHitPoints)
+            {
+                hitPoint.force *= Plugin.FlinchScale.Value;
+            }
         }
 
-        foreach (var hitPoint in __instance.HitReaction.effectorHitPoints)
+        if (__instance.HitReaction.effectorHitPoints != null)
         {
-            hitPoint.force *= Plugin.FlinchScale.Value;
+            foreach (var hitPoint in __instance.HitReaction.effectorHitPoints)
+            {
+                hitPoint.force *= Plugin.FlinchScale.Value;
+            }
         }
     }
 }
@@ -36,16 +43,24 @@ public class PlayerConstructorPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(Player).GetConstructor(BindingFlags.Instance | BindingFlags.Public, null, [], null);
+        // Pega qualquer construtor de instância da classe Player
+        var constructors = typeof(Player).GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        return constructors.Length > 0 ? constructors[0] : null;
     }
 
     [PatchPostfix]
     // ReSharper disable once InconsistentNaming
     public static void Postfix(Player __instance)
     {
-        Traverse.Create(__instance).Field("_fbbikCooldown").SetValue(4f);
-        var val = Traverse.Create(__instance).Field("_fbbikCooldown").GetValue<float>();
-        Plugin.Log.LogInfo($"IK Cooldown: {val}");
+        if (__instance == null) return;
+
+        var fbbikField = Traverse.Create(__instance).Field("_fbbikCooldown");
+        if (fbbikField.FieldExists())
+        {
+            fbbikField.SetValue(4f);
+            var val = fbbikField.GetValue<float>();
+            Plugin.Log.LogInfo($"IK Cooldown: {val}");
+        }
     }
 }
 
@@ -53,16 +68,24 @@ public class SlotViewChangedPostfixPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        return typeof(PlayerBody.EquipmentSlotClass).GetMethod(nameof(PlayerBody.EquipmentSlotClass.method_4));
+        // Busca o método de atualização do renderizador de slots no PlayerBody
+        return AccessTools.Method(typeof(PlayerBody.EquipmentSlotClass), "method_4")
+               ?? AccessTools.Method(typeof(PlayerBody.EquipmentSlotClass), "UpdateRenderers")
+               ?? AccessTools.Method(typeof(PlayerBody.EquipmentSlotClass), "SetSlotView");
     }
 
     [PatchPostfix]
     // ReSharper disable once InconsistentNaming
     public static void Postfix(PlayerBody.EquipmentSlotClass __instance)
     {
+        if (__instance == null || __instance.Renderers == null) return;
+
         for (var i = 0; i < __instance.Renderers.Length; i++)
         {
-            __instance.Renderers[i].enabled = true;
+            if (__instance.Renderers[i] != null)
+            {
+                __instance.Renderers[i].enabled = true;
+            }
         }
     }
 }
